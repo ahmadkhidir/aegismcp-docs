@@ -34,6 +34,14 @@ AegisMCP operates under a hybrid support and operational model. Open-core Commun
 - **Audit trail:** Every administrative action (policy deployment, human approval decision, emergency kill-switch activation) is appended to the tamper-evident cryptographic ledger ([FEAT-007](features/FEAT-007.md)) and retained for 365 days ([NFR-041](nfr.md)).
 - **Break-glass procedure:** Tripping the Emergency Global Kill-Switch requires multi-factor authentication (MFA) and dual-operator authorization in Enterprise production clusters.
 
+**Enterprise Identity Provider (SSO / OIDC) Federation:**
+Production Web Console deployments federate operator access via OpenID Connect (OIDC Core 1.0) with RFC 7636 Authorization Code Flow and Proof Key for Code Exchange (PKCE with SHA-256). The console integrates with enterprise Identity Providers (Okta, Keycloak, Microsoft Entra ID, Ping Identity) using standard parameters:
+- **Identity Provider Authority:** Base issuer URL of the enterprise IdP exposing OpenID Connect discovery (`/.well-known/openid-configuration`).
+- **Client Identifier:** Registered public Single-Page Application (SPA) client ID within the enterprise IdP realm.
+- **Redirect URI:** Whitelisted post-authentication redirect destination for authorization code handoff.
+- **Identity Scopes:** Standard claims requested for RBAC enforcement (`openid`, `profile`, `email`, `roles`).
+- **Session Idle Limit:** Mandatory 15-minute inactivity timeout enforcing [NFR-029](nfr.md); session lock preserves in-progress drafts while requiring operator re-authentication. In non-production and local developer environments, a built-in mock IdP permits instant persona evaluation across standard operational roles.
+
 ---
 
 ## Billing Operations

@@ -4,6 +4,7 @@
 
 | # | Screen Name | File | Route / Path | Platform | Related Features |
 |---|---|---|---|---|---|
+| 0 | Enterprise SSO / OIDC Login | [00-login](screens/00-login.md) | `/login` | Web | [FEAT-008](features/FEAT-008.md), [FEAT-009](features/FEAT-009.md), [NFR-029](nfr.md) |
 | 1 | Security Dashboard | [01-dashboard](screens/01-dashboard.md) | `/dashboard` | Web | [FEAT-008](features/FEAT-008.md), [FEAT-010](features/FEAT-010.md) |
 | 2 | Live Traffic Inspector | [02-live-inspector](screens/02-live-inspector.md) | `/inspector` | Web | [FEAT-001](features/FEAT-001.md), [FEAT-004](features/FEAT-004.md), [FEAT-005](features/FEAT-005.md), [FEAT-008](features/FEAT-008.md) |
 | 3 | Approvals Queue | [03-approvals-queue](screens/03-approvals-queue.md) | `/approvals` | Web | [FEAT-006](features/FEAT-006.md), [FEAT-008](features/FEAT-008.md) |
@@ -68,3 +69,18 @@ Used on: Live Traffic Inspector, Policy Manager, Approvals Queue
 - Dark syntax-highlighted code block using `JetBrains Mono` font ([branding](branding.md)).
 - Inline secret redaction markers highlighted with high-contrast badge pill.
 - One-click "Copy JSON" and "Format Payload" action buttons in header.
+
+### User Profile & Session Popover
+Used on: Top Navbar across all authenticated screens
+- Interactive dropdown popover displaying active operator claims, avatar, and Identity Provider badge.
+- Assigned RBAC roles (`admin`, `operator`, `auditor`, `viewer`) rendered as uppercase badge pills.
+- Live idle countdown timer displaying remaining time before inactivity lock ([NFR-029](nfr.md)), with manual keep-alive refresh button.
+- Development / Staging persona switcher when operating in non-production environments.
+- Single-click session termination ("Sign Out").
+
+### Inactivity Session Timeout Modal
+Used on: Global overlay across all screens upon 15-minute idle expiration ([NFR-029](nfr.md))
+- Centered modal dialog with high-visibility lock indicator and warning styling.
+- Explains that administrative control plane access has been secured due to inactivity.
+- Guarantees preservation of uncommitted policy drafts and active view filters.
+- Actions: "Resume Session" re-authenticates and resets timer; "Sign Out" terminates token session.

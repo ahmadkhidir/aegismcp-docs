@@ -257,6 +257,53 @@ AegisMCP exchanges and persists structured data across its high-performance prox
 }
 ```
 
+### ConsoleOperatorSession
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegismcp.dev/schemas/console-operator-session.schema.json",
+  "title": "ConsoleOperatorSession",
+  "description": "An authenticated human operator session established via enterprise SSO/OIDC with active RBAC claims.",
+  "type": "object",
+  "properties": {
+    "sub": {
+      "type": "string",
+      "description": "Cryptographic subject identifier from the enterprise IdP or SPIFFE user namespace."
+    },
+    "name": {
+      "type": "string",
+      "description": "Full display name of the human operator."
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Corporate email address associated with the enterprise SSO identity."
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["admin", "operator", "auditor", "viewer"]
+      },
+      "description": "RBAC roles assigned by enterprise IdP group claims."
+    },
+    "title": {
+      "type": "string",
+      "description": "Operational organizational title (e.g. SecOps Admin, Platform Engineer, CISO / Auditor)."
+    },
+    "idp": {
+      "type": "string",
+      "description": "Authority issuer identifier of the authenticating Identity Provider."
+    },
+    "sessionExpiresAt": {
+      "type": "integer",
+      "description": "Unix timestamp in milliseconds when the active 15-minute inactivity session window expires."
+    }
+  },
+  "required": ["sub", "name", "email", "roles", "idp", "sessionExpiresAt"]
+}
+```
+
 ---
 
 ## Relationships
@@ -267,11 +314,13 @@ AegisMCP exchanges and persists structured data across its high-performance prox
 - **AuditBlock** `agentId` references **AgentIdentity** — each immutable ledger entry records an interaction executed by one agent.
 - **SecurityViolation** `agentId` references **AgentIdentity** — each security violation event is attributed to one agent identity.
 - **SecurityViolation** `blockHash` references **AuditBlock** — each security violation is sealed within an immutable audit block.
+- **ConsoleOperatorSession** `roles` govern administrative execution permissions across **SecurityPolicy**, **ApprovalTicket**, and **AuditBlock** actions.
 
 ---
 
 ## Personal Data & Compliance Tagging
 
 In accordance with data governance obligations outlined in [nfr](nfr.md):
+- **ConsoleOperatorSession** `name` and `email`: Encapsulate authenticated human operator identity, governed by enterprise IdP directory retention and access policies.
 - **ApprovalTicket** `reviewedBy`: Contains human reviewer email or username. Subject to statutory access and deletion procedures.
 - **AuditBlock** and **SecurityViolation** records: Persisted in the tamper-evident ledger for 365 days under regulatory retention mandates ([NFR-041](nfr.md)), and archived in customer private storage.
