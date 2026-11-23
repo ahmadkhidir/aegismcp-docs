@@ -8,7 +8,7 @@
 As Marcus Vance, I want an instant kill-switch API and CLI command to immediately quarantine rogue agents or sever all connections to compromised MCP servers, so that runaway agent loops can be arrested within seconds.
 
 **Description:**
-A rapid-response emergency control mechanism that allows administrators to sever active connections and block new invocations at multiple granularities: single agent session, specific agent identity, single MCP server, or a global emergency lockdown. It also incorporates an automated circuit breaker that trips when an agent exceeds safe invocation velocity thresholds. Every action is recorded in the tamper-evident ledger with the operator, target, and reason, and stays in force until an authorized operator releases it.
+A rapid-response emergency control mechanism that allows administrators to sever active connections and block new invocations at multiple granularities: single agent session, specific agent identity, single MCP server, or a global emergency lockdown. It also incorporates an automated circuit breaker that trips when an agent exceeds safe invocation velocity thresholds. Every action is recorded in the tamper-evident ledger with the operator, the second approver where one is required, the target, and the reason, and stays in force until an authorized operator releases it.
 
 **Acceptance Criteria:**
 - **Given** an operator authenticated through the enterprise identity provider holding the `operator` or `admin` role
@@ -17,9 +17,16 @@ A rapid-response emergency control mechanism that allows administrators to sever
 - **Given** a compromised upstream MCP server identified by an operator holding the `operator` or `admin` role
   **When** the operator sends the same request with `targetType` `server` and that server's `targetId`
   **Then** every route to that server is severed across all agent sessions and the response carries `status` `SEVERED`.
-- **Given** an operator requesting a global lockdown with `targetType` `global`, no `targetId`, and a multi-factor re-confirmation of that operator completed within the preceding five minutes
+- **Given** a global lockdown request in an Enterprise production deployment carrying `targetType` `global`, no `targetId`, a multi-factor re-confirmation of the initiating operator completed within the preceding five minutes, and `secondApprover` naming a different `operator` or `admin` with an active authenticated session who has confirmed the action
   **When** the request is accepted
   **Then** all new tool invocations and connection attempts are refused cluster-wide and the response carries `status` `LOCKDOWN`.
+- **Given** a global lockdown or release request in a self-hosted or non-Enterprise deployment
+  **When** the initiating operator's multi-factor re-confirmation is complete and the request carries no `secondApprover`
+  **Then** the action is authorized by that operator alone.
+- **Given** an Enterprise production global request with no `secondApprover`, with a `secondApprover` identical to the initiating operator, or with a `secondApprover` supplied for anything other than an Enterprise production global target
+  **Then** the response is HTTP 400 with no quarantine or lockdown applied.
+- **Given** a `secondApprover` that does not resolve to an active authenticated operator session, holds neither `operator` nor `admin`, or has not confirmed the action
+  **Then** the response is HTTP 403 with no quarantine or lockdown applied.
 - **Given** a global lockdown request whose multi-factor re-confirmation is absent or older than five minutes
   **Then** the response is HTTP 403 with no quarantine or lockdown applied.
 - **Given** a request whose `targetType` is not one of `session`, `agent`, `server`, `global`, whose `targetId` is missing for a scoped target, or which supplies a `targetId` with `global`
@@ -38,14 +45,14 @@ A rapid-response emergency control mechanism that allows administrators to sever
   **Then** the circuit breaker closes the agent's transport streams and refuses that identity until an operator releases it, and `EVT-011` records the breach with its scope and target.
 - **Given** an active quarantine or lockdown
   **When** an operator holding `operator` or `admin` sends `POST /api/v1/emergency/release` with the matching `targetType`, the scoped `targetId`, and a `reason`
-  **Then** the target may connect and invoke tools again, the release is appended to the ledger with the operator identity and reason, and the response is HTTP 200 carrying `status` `RELEASED` for a scoped target or `LOCKDOWN_LIFTED` for `global`, with an ISO-8601 `timestamp`. A `global` release requires the same five-minute multi-factor re-confirmation and returns HTTP 403 without it.
+  **Then** the target may connect and invoke tools again, the release is appended to the ledger with the initiating operator identity, the second approver identity where one is required, and the reason, and the response is HTTP 200 carrying `status` `RELEASED` for a scoped target or `LOCKDOWN_LIFTED` for `global`, with an ISO-8601 `timestamp`. A `global` release carries the same five-minute multi-factor re-confirmation and, in Enterprise production, the same distinct `secondApprover` requirement, with a missing, duplicate, or misplaced `secondApprover` returning HTTP 400 and one that fails authentication, authorization, or confirmation returning HTTP 403, and the lockdown left in force.
 - **Given** a release request whose `targetId` carries no active quarantine or lockdown
-  **Then** the response is HTTP 404 with the target's state unchanged; a release request for a scoped target without a `reason` returns HTTP 400.
+  **Then** the response is HTTP 404 with the target's state unchanged; a release request without a `reason` returns HTTP 400.
 - **Given** an operator running `aegis-cli kill --agent <agent-id>`
   **When** the gateway accepts the request
   **Then** the CLI prints the returned status, affected session count, and timestamp and exits 0, and every documented HTTP failure exits non-zero with its status and reason on stderr.
 
 **Edge Cases & Failure States:**
-- Administrator accidentally trips the global kill-switch → the CLI refuses a `global` target without `--confirm-lockdown`, and the gateway independently refuses it without a fresh multi-factor re-confirmation.
+- Administrator accidentally trips the global kill-switch → the CLI refuses a `global` target without `--confirm-lockdown`, the gateway independently refuses it without a fresh multi-factor re-confirmation, and an Enterprise production deployment also refuses it without a second operator's confirmation.
 - A gateway node restarts while quarantines or a lockdown are in force → the state is restored before the node accepts traffic, so a restart cannot lift an emergency control.
 - A kill action arrives while the target has a tool invocation in flight → the invocation is terminated with a `-32001 Policy Violation` error rather than completed, and the stream closes behind it.
