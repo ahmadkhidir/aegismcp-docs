@@ -24,7 +24,7 @@ AegisMCP operates under a hybrid support and operational model. Open-core Commun
 **Roles and permissions:**
 | Role | Can view | Can change | Approval required for |
 |---|---|---|---|
-| Platform Engineer | Gateway telemetry, active sessions, system health | Concurrency limits, HPA scaling, cluster config, emergency kill and release ([FEAT-010](features/FEAT-010.md)) | — |
+| Platform Engineer | Gateway telemetry, active sessions, system health | Concurrency limits, HPA scaling, cluster config, emergency kill and release ([FEAT-010](features/FEAT-010.md)) | Global lockdown and release in Enterprise production clusters |
 | DevSecOps Engineer | Traffic streams, violation alerts, audit records | Security policies ([FEAT-002](features/FEAT-002.md)), approval tickets ([FEAT-006](features/FEAT-006.md)) | Production policy deployment |
 | Compliance Auditor | Cryptographic ledger, compliance reports, verify proofs | Generate compliance exports ([FEAT-011](features/FEAT-011.md)) | Subject deletion / DSR requests |
 | System Admin | All tenant metadata, user accounts, SSO/RBAC | Role assignments, billing tier, cluster binding | Tenant deletion |
@@ -32,7 +32,7 @@ AegisMCP operates under a hybrid support and operational model. Open-core Commun
 **Governance controls:**
 - **Least privilege:** All administrative operations are role-scoped via enterprise SSO and RBAC; shared administrator credentials are strictly prohibited. System Admin and DevSecOps Engineer hold `admin`; Platform Engineer holds `operator`; Compliance Auditor holds `auditor`; read-only observers hold `viewer`.
 - **Audit trail:** Every administrative action (policy deployment, human approval decision, emergency kill-switch and release action) is appended to the tamper-evident cryptographic ledger ([FEAT-007](features/FEAT-007.md)) and retained for 365 days ([NFR-041](nfr.md)).
-- **Break-glass procedure:** Global lockdown and global release are break-glass actions carrying the operator re-confirmation defined in [FEAT-010](features/FEAT-010.md); Security Engineering reviews every use within one business day and records the outcome against the invoking operator.
+- **Break-glass procedure:** Tripping the Emergency Global Kill-Switch or releasing a global lockdown requires multi-factor authentication (MFA) and dual-operator authorization in Enterprise production clusters. Security Engineering reviews every use within one business day and records the outcome against both operators.
 
 **Enterprise Identity Provider (SSO / OIDC) Federation:**
 Production Web Console deployments federate operator access via OpenID Connect (OIDC Core 1.0) with RFC 7636 Authorization Code Flow and Proof Key for Code Exchange (PKCE with SHA-256). The console integrates with enterprise Identity Providers (Okta, Keycloak, Microsoft Entra ID, Ping Identity) using standard parameters:
