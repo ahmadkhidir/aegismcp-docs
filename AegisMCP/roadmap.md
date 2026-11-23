@@ -110,7 +110,7 @@ flowchart LR
 **Key Outcomes:**
 - Every protection declared in [features](features.md) is active and enforced in the release an enterprise installs, including calls where several protections act on the same request.
 - Every interface contract the product publishes to integrating teams and to console operators is fulfilled by that release, so an integration built to the contract needs no rework.
-- The quantitative targets in [nfr](nfr.md) hold on the release at the scale it commits to, covering added latency ([NFR-001](nfr.md)), scrubbing throughput ([NFR-002](nfr.md)), console event delivery ([NFR-005](nfr.md)), command-line startup ([NFR-006](nfr.md)), proxy availability ([NFR-010](nfr.md)), and audit tamper-evidence ([NFR-026](nfr.md)).
+- The quantitative targets in [nfr](nfr.md) hold on the release at the scale it commits to, covering added latency ([NFR-001](nfr.md)), scrubbing added latency ([NFR-002](nfr.md)), console event delivery ([NFR-005](nfr.md)), command-line startup ([NFR-006](nfr.md)), proxy availability ([NFR-010](nfr.md)), and audit tamper-evidence ([NFR-026](nfr.md)).
 - Administrators and developers complete their primary Web Console and command-line journeys against that release, with every declared screen state reachable and no journey ending in a dead end.
 
 **Features Re-Verified:**
