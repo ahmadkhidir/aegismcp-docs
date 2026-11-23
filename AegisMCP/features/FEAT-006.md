@@ -16,6 +16,8 @@ Slack approval messages carry an Approve and a Reject button whose action identi
 
 An authenticated callback is resolved through the same approval path as the console. The acting Slack user is mapped to an operator session, that operator's identity is sealed as the resolving approver, and a mapped operator without the `operator` or `admin` role is refused. The endpoint answers `200` for every callback it has authenticated, because Slack redelivers any other status: a decision that was applied is reported back with `{"replace_original": true, "text": "<decision> by <operator> at <timestamp>"}` so the channel message shows the outcome, a refused actor receives an ephemeral message stating why, and a ticket that is already resolved, cancelled, or expired yields `200` with the outcome already recorded and no second decision.
 
+Slack notifications are posted once through the workspace's incoming-webhook URL. The deployment configures that URL and the workspace signing secret, and no bot token and no interaction response URL, so a message the gateway has posted is only ever changed by its answer to a click on that message. An approval that reaches its 300-second time-to-live expires and fails the suspended call closed with `APPROVAL_TIMEOUT`, and a pending ticket whose agent disconnects is cancelled without resuming the call. Neither expiry nor cancellation, nor a decision taken in the console or through a webhook, edits the Slack message: it stays as posted. The interaction's sealed ledger entry and the Web Console approval history carry the authoritative outcome, and a later click on a ticket that is no longer pending reports the outcome already recorded.
+
 **Acceptance Criteria:**
 - **Given** an agent calling a sensitive tool requiring human approval
   **When** the tool call is intercepted by the gateway
@@ -25,7 +27,7 @@ An authenticated callback is resolved through the same approval path as the cons
   **Then** AegisMCP releases the suspended JSON-RPC call to the upstream tool server and forwards the resulting response back to the waiting agent.
 - **Given** an approver clicking "Reject" or the approval window expiring without an action
   **When** the decision is processed
-  **Then** the tool call is rejected, returning a JSON-RPC execution denied error to the agent, and the decision is permanently recorded in the audit log.
+  **Then** the tool call is denied with a JSON-RPC execution-denied error to the agent (`APPROVAL_DENIED` for a rejection, `APPROVAL_TIMEOUT` for an expiry), the outcome is sealed in the audit ledger, the console shows the ticket as rejected or expired, and the Slack message remains as posted.
 - **Given** a pending ticket and a Slack operator bound to `operator` or `admin`
   **When** the operator clicks Approve
   **Then** the callback answers `200` with `replace_original` set, the ticket becomes approved, the agent's suspended call resumes, the ledger seals the mapped operator as the approver, and the channel message reports the operator and decision time.
@@ -46,8 +48,8 @@ An authenticated callback is resolved through the same approval path as the cons
   **Then** the gateway answers `404`.
 
 **Edge Cases & Failure States:**
-- Human approver does not respond before timeout expires → Auto-reject the request with `APPROVAL_TIMEOUT` error, freeing gateway resources.
-- Agent disconnects or cancels the request while approval is pending → Automatically cancel the pending approval ticket and mark the Slack notification as expired.
+- Human approver does not respond before the ticket's time-to-live expires → The ticket expires, the suspended call fails closed with an `APPROVAL_TIMEOUT` error, and gateway resources are freed.
+- Agent disconnects or cancels the request while approval is pending → Automatically cancel the pending approval ticket without resuming the call, and leave the Slack message as posted.
 - Two approvers click at the same moment → The first decision is applied and sealed, and the second callback reports that decision without changing it.
 - Ticket is resolved from the console or a webhook first → A later Slack click reports the recorded decision and changes nothing.
 - Slack delivery of the approval message fails → The ticket stays pending and reachable from the Web Console queue until its 300-second expiry.
