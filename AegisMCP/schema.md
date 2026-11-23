@@ -159,6 +159,72 @@ AegisMCP exchanges and persists structured data across its high-performance prox
 }
 ```
 
+### AdministrativeAuditEntry
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegismcp.dev/schemas/administrative-audit-entry.schema.json",
+  "title": "AdministrativeAuditEntry",
+  "description": "An immutable, cryptographically hash-chained record sealing one administrative action, its target, and its outcome.",
+  "type": "object",
+  "properties": {
+    "blockIndex": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Position of this entry in the shared ledger chain, drawn from the same monotonically increasing 64-bit sequence as every tool-interaction block."
+    },
+    "blockHash": {
+      "type": "string",
+      "description": "SHA-256 cryptographic hash of this entry's contents and signatures."
+    },
+    "parentHash": {
+      "type": "string",
+      "description": "SHA-256 hash of the immediately preceding sealed entry in the chain, whether it records a tool interaction or an administrative action."
+    },
+    "actor": {
+      "type": "string",
+      "description": "Verified principal that performed the action: the operator's authenticated subject for a console or command-line action, the CI/CD service account for a pipeline action, or the Git commit that introduced the document for a GitOps reload (personal data)."
+    },
+    "secondApprover": {
+      "type": ["string", "null"],
+      "description": "Distinct verified operator whose authorization a dual-operator action required and received; null when the action required one operator (personal data)."
+    },
+    "action": {
+      "type": "string",
+      "enum": ["policy_publish", "policy_activation", "policy_reload", "approval_decision", "kill", "release", "role_change"],
+      "description": "Administrative action the entry seals."
+    },
+    "target": {
+      "type": "string",
+      "description": "Object the action applied to: the policy name and version for a publish, activation, or reload; the approval ticket identifier for an approval decision; the emergency target type and identifier, or the global scope, for a kill or release; the operator subject whose role assignment changed for a role change."
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["accepted", "rejected", "refused"],
+      "description": "Result of the action: accepted when it completed and its effect is in force, rejected when it was denied and no state changed, refused when the deployment's configuration does not permit the action at all."
+    },
+    "reasonCategory": {
+      "type": ["string", "null"],
+      "description": "Identifier from the deployment's audit taxonomy naming why the action was taken, refused, or rejected, such as a base-version conflict, an invalid document, or an emergency declaration; null when the action carried none."
+    },
+    "reason": {
+      "type": ["string", "null"],
+      "description": "Operator-supplied justification sealed with the action, as required for a release; null when the action carried none (personal data)."
+    },
+    "gitCommitHash": {
+      "type": ["string", "null"],
+      "description": "Commit whose content produced the action when the action originated from a Git commit, as on a GitOps reload or a pipeline-driven publish or activation; on a reload this is the same commit the actor names, and it is null otherwise."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Immutable timestamp when the entry was sealed (UTC)."
+    }
+  },
+  "required": ["blockIndex", "blockHash", "parentHash", "actor", "secondApprover", "action", "target", "outcome", "reasonCategory", "reason", "gitCommitHash", "timestamp"]
+}
+```
+
 ### AuditBlock
 ```json
 {
@@ -171,7 +237,7 @@ AegisMCP exchanges and persists structured data across its high-performance prox
     "blockIndex": {
       "type": "integer",
       "minimum": 0,
-      "description": "Sequential monotonically increasing 64-bit integer block number."
+      "description": "Position of this block in the shared ledger chain, drawn from the same monotonically increasing 64-bit sequence as every administrative audit entry."
     },
     "blockHash": {
       "type": "string",
@@ -179,7 +245,7 @@ AegisMCP exchanges and persists structured data across its high-performance prox
     },
     "parentHash": {
       "type": "string",
-      "description": "SHA-256 hash of the immediately preceding block in the chain."
+      "description": "SHA-256 hash of the immediately preceding sealed entry in the chain, whether it records a tool interaction or an administrative action."
     },
     "agentId": {
       "type": "string",
@@ -328,11 +394,16 @@ AegisMCP exchanges and persists structured data across its high-performance prox
 - **AgentIdentity** `assignedPolicyId` references **SecurityPolicy** — each agent is bound to exactly one active security policy configuration.
 - **ApprovalTicket** `agentId` references **AgentIdentity** — each approval request originates from exactly one authenticated agent.
 - **ApprovalTicket** `triggerPolicyId` references **SecurityPolicy** — each approval requirement is mandated by a rule in a specific policy.
+- **AdministrativeAuditEntry** `actor` names the **ConsoleOperatorSession** subject that performed an administrative action, or the Git commit that introduced the document on a GitOps reload, so each action and its principal are sealed in the same record.
+- **AdministrativeAuditEntry** `secondApprover` names the second **ConsoleOperatorSession** subject whose authorization a dual-operator action required.
+- **AdministrativeAuditEntry** and **AuditBlock** form one continuous chain: each `blockIndex` is drawn from a single monotonically increasing sequence and each `parentHash` names the `blockHash` of the immediately preceding sealed entry of either kind, so one verification covers tool interactions and administrative actions together.
+- **AdministrativeAuditEntry** `target` names the **SecurityPolicy** name and version for a policy action, and `gitCommitHash` names the commit that introduced that version.
+- **AdministrativeAuditEntry** with action `approval_decision` deliberately seals the human decision against the **ApprovalTicket** identifier while the **AuditBlock** for the same ticket seals the interaction and its `reviewedBy` outcome, so the decision and the invocation stay separately searchable in one chain.
 - **AuditBlock** `agentId` references **AgentIdentity** — each immutable ledger entry records an interaction executed by one agent.
 - **AuditBlock** `reviewedBy` names the **ConsoleOperatorSession** subject that resolved a required approval, so the decision and its approver are sealed in the same record.
 - **SecurityViolation** `agentId` references **AgentIdentity** — each security violation event is attributed to one agent identity.
 - **SecurityViolation** `blockHash` references **AuditBlock** — each security violation is sealed within an immutable audit block.
-- **ConsoleOperatorSession** `roles` govern administrative execution permissions across **SecurityPolicy**, **ApprovalTicket**, and **AuditBlock** actions.
+- **ConsoleOperatorSession** `roles` govern administrative execution permissions across **SecurityPolicy**, **ApprovalTicket**, **AuditBlock**, and **AdministrativeAuditEntry** actions.
 
 ---
 
@@ -341,6 +412,7 @@ AegisMCP exchanges and persists structured data across its high-performance prox
 In accordance with data governance obligations outlined in [nfr](nfr.md):
 - **ConsoleOperatorSession** `name` and `email`: Encapsulate authenticated human operator identity, governed by enterprise IdP directory retention and access policies.
 - **ApprovalTicket** `reviewedBy`: Contains human reviewer email or username. Subject to statutory access and deletion procedures.
+- **AdministrativeAuditEntry** `actor`, `secondApprover`, and `reason`: Contain the authenticated operator identity and the operator-supplied justification; governed by the same access and deletion procedures as the approving reviewer identity.
 - **AuditBlock** `reviewedBy`: Repeats the resolving reviewer identity inside the sealed record so the approval decision travels with the ledger entry; governed by the same access and deletion procedures.
 - **AuditBlock** `argumentsHash`: Holds only a digest of the request arguments, so parameter material itself is never exposed through audit queries or exports.
-- **AuditBlock** and **SecurityViolation** records: Persisted in the tamper-evident ledger for 365 days under regulatory retention mandates ([NFR-041](nfr.md)), and archived in customer private storage.
+- **AuditBlock**, **AdministrativeAuditEntry**, and **SecurityViolation** records: Persisted in the tamper-evident ledger for 365 days under regulatory retention mandates ([NFR-041](nfr.md)), and archived in customer private storage.

@@ -31,7 +31,7 @@ AegisMCP operates under a hybrid support and operational model. Open-core Commun
 
 **Governance controls:**
 - **Least privilege:** All administrative operations are role-scoped via enterprise SSO and RBAC; shared administrator credentials are strictly prohibited. System Admin and DevSecOps Engineer hold `admin`; Platform Engineer holds `operator`; Compliance Auditor holds `auditor`; read-only observers hold `viewer`.
-- **Audit trail:** Every administrative action (policy deployment, human approval decision, emergency kill-switch and release action) is appended to the tamper-evident cryptographic ledger ([FEAT-007](features/FEAT-007.md)) and retained for 365 days ([NFR-041](nfr.md)).
+- **Audit trail:** Every administrative action — policy publish, activation, and GitOps reload; human approval decision; emergency kill, lockdown, and release; role change — is appended to the tamper-evident cryptographic ledger as an administrative audit entry ([schema](schema.md)) naming the actor, action, target, outcome, reason category, and originating commit where one applies, sealed in the same hash chain as tool-interaction blocks ([FEAT-007](features/FEAT-007.md)) and retained for 365 days ([NFR-041](nfr.md)).
 - **Break-glass procedure:** Tripping the Emergency Global Kill-Switch or releasing a global lockdown requires multi-factor authentication (MFA) and dual-operator authorization in Enterprise production clusters. Security Engineering reviews every use within one business day and records the outcome against both operators.
 
 **Enterprise Identity Provider (SSO / OIDC) Federation:**
@@ -90,7 +90,7 @@ Workflows execute the commercial policies defined in [monetization](monetization
 | Check | Method | When |
 |---|---|---|
 | Support SLA Compliance | Automated ticket turnaround analysis against target thresholds | Monthly |
-| Administrative Audit Completeness | Verification of administrative action logs against cryptographic ledger entries | Monthly |
+| Administrative Audit Completeness | Every administrative action taken through the console, the command line, or the policy pipeline reconciles to a sealed administrative audit entry ([schema](schema.md)) | Monthly |
 | Disaster Recovery & Kill-Switch Drill | Simulated lockdown, quarantine release, and failover dry-run in staging environment | Quarterly |
 | Billing & Dunning Reconciliation | Verification of Stripe webhook handling against active entitlement status | Monthly |
 | Compliance Export Integrity | Generate one EU AI Act and one SOC 2 export, then verify each signature and Merkle root against the ledger and the published key | Quarterly |
