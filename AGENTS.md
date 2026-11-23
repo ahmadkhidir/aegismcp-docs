@@ -42,7 +42,8 @@ specification.
 
 ## Checks
 
-- Run `python3 scripts/validate_bprd.py docs/<ProductName>` when the validator exists.
+- Run the validator that ships with the `authoring-bprd` skill: invoke `scripts/validate_bprd.py`
+  from the installed skill directory, passing `docs/<ProductName>` as the product path.
 - Verify that every cross-reference (`FEAT-###`, `NFR-###`, `C-###`, screen IDs) resolves cleanly.
 - Confirm every document reads as a specification, without implementation commentary or code traces.
 
@@ -53,5 +54,5 @@ specification.
 - All doc-gap questions are settled with permanent specification text, not conversational assumptions.
 - Commit specification changes separately from code with a conventional commit message (e.g.
   `docs(<product>): update authentication requirements for OAuth provider`).
-- When this folder is a git submodule, the commit happens in the docs repository; the pointer bump in
+- When this folder is a git submodule or separate repository, the commit happens in the docs repository; the pointer bump in
   the parent repo is a separate PR.
