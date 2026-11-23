@@ -32,7 +32,7 @@ NFR-005 is measured from event emission at the gateway to the rendered update on
 
 | ID | Availability target | Monthly error budget | Measurement |
 |---|---|---|---|
-| NFR-010 | 99.99% monthly for inline proxy path | 4m 23s | Synthetic uptime probe + client telemetry |
+| NFR-010 | 99.99% monthly for inline proxy path | 4m 23s | Liveness probe on `GET /health` ([FEAT-001](features/FEAT-001.md)) plus client telemetry |
 | NFR-011 | 99.95% monthly for Web Console & Audit query APIs | 21m 36s | External monitoring service |
 
 **Recovery objectives:**
@@ -46,6 +46,7 @@ NFR-005 is measured from event emission at the gateway to the rendered update on
 | Human approval (Slack/Webhook) down | Buffer requests in durable queue; reject upon 5-minute timeout if unacknowledged | Agent receives `APPROVAL_SERVICE_UNAVAILABLE` error; non-approval tools unaffected |
 | Audit export SIEM endpoint unreachable | Spool audit records to local encrypted disk buffer; auto-retry with exponential backoff | No impact on real-time tool execution; log backlog drains when SIEM restores |
 | Outbound PII scrubber memory pressure | Stream payloads through sliding fixed-size window; enforce 20MB tool output ceiling | Tool responses exceeding ceiling truncated with `RESPONSE_TOO_LARGE` notice |
+| Agent SSE or WebSocket stream lost | End the session, abandon its in-flight calls, and cancel and mark expired any pending approval ticket | The agent reconnects on a new session and reissues the call |
 
 **Maintenance windows:** Zero-downtime rolling upgrades supported via Kubernetes rolling updates and graceful connection draining.
 
@@ -61,7 +62,7 @@ NFR-005 is measured from event emission at the gateway to the rendered update on
 | NFR-023 | Secrets Management | Zero hardcoded credentials; dynamic retrieval from HashiCorp Vault or Kubernetes Secrets | In-memory credentials scrubbed after use |
 | NFR-024 | Input Validation & Injection Defense | Strict JSON schema enforcement; path traversal and command injection token filtering | Mitigates OWASP LLM03 and command injection vectors |
 | NFR-025 | Outbound DLP & Redaction | Automated redaction of AWS, GitHub, GCP, OpenAI tokens, and credit card/SSN patterns | Aho-Corasick multi-pattern scanner with sub-2ms overhead |
-| NFR-026 | Audit Tamper-Evidence | Continuous SHA-256 cryptographic hash-chaining across all log entries | Each sealed entry covers its argument digest and the resolving approver identity; any omitted or modified historical entry invalidates chain verification |
+| NFR-026 | Audit Tamper-Evidence | Continuous SHA-256 hash-chaining from the genesis block to the sealed head across all log entries | Each sealed entry covers its argument digest and the resolving approver identity; a modified, reordered, omitted, or uncovered historical entry fails verification at the first affected index and invalidates every later block |
 | NFR-027 | Default Stance | Fail-closed: unmapped agent identities or undeclared tools denied execution | Explicit policy grant required for any tool invocation |
 | NFR-028 | Supply Chain Security | Zero critical or high severity CVEs in container base images and dependencies | Weekly automated SBOM scanning and dependency vulnerability gates |
 | NFR-029 | Administrative Access | Multi-Factor Authentication (MFA) and RBAC enforced for Web Console access | Session timeout after 15 minutes of inactivity; every console request and event-stream subscription carries the operator session |
@@ -99,9 +100,9 @@ AegisMCP operates as a deterministic security proxy, policy evaluator, and patte
 |---|---|---|---|
 | NFR-001 | Automated Gatling load test suite (latency p99 < 5ms) | Every CI/CD release build | Platform Engineering |
 | NFR-002 | k6 benchmark test for DLP scrubber throughput | Every CI/CD release build | DevSecOps Engineering |
-| NFR-010 | Continuous synthetic heartbeat probes across staging and production | Continuous (24/7) | Platform Engineering |
+| NFR-010 | Continuous synthetic liveness and readiness probes across staging and production, using the endpoints defined in [FEAT-001](features/FEAT-001.md) | Continuous (24/7) | Platform Engineering |
 | NFR-020 | Automated mTLS and OIDC test harness with invalid credential injection | Every PR build | Security Engineering |
 | NFR-025 | Golden test suite of 500+ credential formats and PII edge-case samples | Every PR build | Security Engineering |
-| NFR-026 | Cryptographic chain verification utility (`aegis-cli verify-audit`) | Automated daily scheduled job | Compliance & Audit |
+| NFR-026 | `aegis-cli verify-audit` recomputes the chain from genesis to the sealed head and exits non-zero at the first block that fails | Automated daily scheduled job | Compliance & Audit |
 | NFR-028 | Container vulnerability scan (Trivy / Snyk) | Automated on container build | Platform Engineering |
 | NFR-040 | End-to-end integration test of Human-in-the-Loop Slack approval workflow | Every CI/CD release build | QA Engineering |
