@@ -34,7 +34,12 @@ flowchart LR
         F12["FEAT-012: Parameter Sanitization"]
     end
 
-    P1 --> P2 --> P3
+    subgraph P4["Phase 4 — Integration & Release Hardening (Post-Q3)"]
+        direction TB
+        FV["FEAT-001 to FEAT-012: Released Capability Re-Verification"]
+    end
+
+    P1 --> P2 --> P3 --> P4
 ```
 
 ---
@@ -95,6 +100,34 @@ flowchart LR
 |---|---|---|
 | [FEAT-011](features/FEAT-011.md) | Automated Regulatory Compliance Reports | So enterprise customers can pass security audits and prove regulatory oversight instantly |
 | [FEAT-012](features/FEAT-012.md) | Dynamic Tool Parameter Validation | So flawed or malicious agent inputs are sanitized before they can damage downstream systems |
+
+---
+
+## Phase 4: Integration & Release Hardening
+
+**Goal:** Prove that the capabilities delivered in Phases 1 through 3 work as one secure release, so an enterprise can adopt version 1.0 without discovering gaps between parts that were validated separately.
+**Target:** Post-Q3
+**Key Outcomes:**
+- Every protection declared in [features](features.md) is active and enforced in the release an enterprise installs, including calls where several protections act on the same request.
+- Every interface contract the product publishes to integrating teams and to console operators is fulfilled by that release, so an integration built to the contract needs no rework.
+- The quantitative targets in [nfr](nfr.md) hold on the release at the scale it commits to, covering added latency ([NFR-001](nfr.md)), scrubbing throughput ([NFR-002](nfr.md)), console event delivery ([NFR-005](nfr.md)), command-line startup ([NFR-006](nfr.md)), proxy availability ([NFR-010](nfr.md)), and audit tamper-evidence ([NFR-026](nfr.md)).
+- Administrators and developers complete their primary Web Console and command-line journeys against that release, with every declared screen state reachable and no journey ending in a dead end.
+
+**Features Re-Verified:**
+| Feature ID | Feature | What Re-Verification Confirms |
+|---|---|---|
+| [FEAT-001](features/FEAT-001.md) | Zero-Trust Streaming Traffic Interception | Agent traffic reaches a tool only through the gateway, and every transport an agent uses is inspected on the release |
+| [FEAT-002](features/FEAT-002.md) | Declarative Tool Access Policies | A policy authored for the release takes effect on live traffic without restarting the gateway |
+| [FEAT-003](features/FEAT-003.md) | Local Developer Command-Line Tool | A developer reproduces a tool interaction locally and sees the same allow, block, and approval decisions the gateway returns in production |
+| [FEAT-004](features/FEAT-004.md) | Behavioral Tool-Chaining Anomaly Defense | A dangerous sequence spread across separate tool calls is interrupted before its final step, with session state surviving between calls |
+| [FEAT-005](features/FEAT-005.md) | Outbound Secret and Personal Data Masking | Secrets and personal data are removed from a tool response before the agent receives it, including responses large enough to stream |
+| [FEAT-006](features/FEAT-006.md) | Human-in-the-Loop Approval Gateway | A high-impact tool call pauses, reaches a human approver, and resumes or expires on the release, with the decision recorded |
+| [FEAT-007](features/FEAT-007.md) | Tamper-Evident Security Audit Ledger | The ledger verifies cleanly after a mixed run of allowed, blocked, and approved calls, and an altered entry is detected |
+| [FEAT-008](features/FEAT-008.md) | Web Security Console and Live Traffic Inspector | The console shows live traffic, policy decisions, and pending approvals from the same gateway that served the calls |
+| [FEAT-009](features/FEAT-009.md) | Verified Agent Identity Integration | A connection carrying a verified agent identity is admitted and attributed correctly, and a connection without one is refused |
+| [FEAT-010](features/FEAT-010.md) | Emergency Global Kill-Switch & Circuit Breaker | The kill-switch halts new tool execution across the deployment, and the circuit breaker isolates one failing tool without affecting others |
+| [FEAT-011](features/FEAT-011.md) | Automated Regulatory Compliance Reports | A compliance report produced from the release verifies against the audit ledger it summarizes |
+| [FEAT-012](features/FEAT-012.md) | Dynamic Tool Parameter Validation | Malformed or hostile tool arguments are rejected or sanitized before reaching the downstream system |
 
 ---
 
