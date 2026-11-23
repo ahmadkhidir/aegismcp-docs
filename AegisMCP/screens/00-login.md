@@ -1,11 +1,9 @@
 ## Screen 0: Enterprise SSO / OIDC Login
 
 **Route:** `/login` (Initial Authentication Gate)
-**Platform:** Web
-**Presentation:** Page
+**Device Classes:** All
 **Purpose:** Authenticate human security and platform administrators accessing the Web Management Console via corporate Single Sign-On (SSO / OIDC), enforce Multi-Factor Authentication (MFA), and establish role-scoped access control ([FEAT-008](../features/FEAT-008.md), [FEAT-009](../features/FEAT-009.md), [NFR-029](../nfr.md)).
 **Visual Focus:** Centered brand shield mark with high-visibility "Sign in with Enterprise SSO" primary action.
-**Action Hierarchy:** Primary: Authenticate via Corporate Identity Provider (OIDC / SAML); Secondary: Select Development/Staging Persona (when non-production mock mode is active).
 **Entry Points:** Initial console navigation while unauthenticated, session timeout redirect ([NFR-029](../nfr.md)), or explicit sign-out.
 **Exit Points:** [Security Dashboard](01-dashboard.md) (or originally requested destination route upon successful authentication).
 
@@ -24,12 +22,12 @@
 
 ### Components
 
-| Component | Type | Platform | Purpose | Data Source |
-|---|---|---|---|---|
-| Brand Header | Header | Web | Identifies platform, version, and mission | Static asset `A-002` |
-| SSO Action Panel | Card | Web | Triggers enterprise IdP redirect with PKCE challenge | OIDC Client Configuration |
-| Persona Selector | Grid | Web | Allows instant role-switching for local evaluation and testing | Persona directory ([user-personas](../user-personas.md)) |
-| Security Footer | Footer | Web | Displays governance and cryptographic identity standards compliance | Static text |
+| Component | Type | Purpose | Available On | Priority | Data Source |
+|---|---|---|---|---|---|
+| Brand Header | Header | Identifies platform, version, and mission | Mobile, Tablet, Desktop | — | Static |
+| SSO Action Panel | Card | Triggers enterprise IdP redirect with PKCE challenge | Mobile, Tablet, Desktop | Primary | WRITE[ConsoleOperatorSession(sub, name, email, roles, idp, sessionExpiresAt)] |
+| Persona Selector | Grid | Allows instant role-switching for local evaluation and testing | Mobile, Tablet, Desktop | Secondary | WRITE[ConsoleOperatorSession(sub, name, email, roles, idp)] |
+| Security Footer | Footer | Displays governance and cryptographic identity standards compliance | Mobile, Tablet, Desktop | — | Static |
 
 ### Overlays
 
@@ -52,9 +50,9 @@ None (this screen acts as the root authentication gate overlaying the applicatio
 
 ### States
 
-| State | Condition | What the User Sees |
-|---|---|---|
-| **Default (Unauthenticated)** | No valid session active | Clean login card with primary SSO action and persona shortcuts in non-production |
-| **Authenticating / Redirecting** | Authorization handshake in flight | Spinner indicator with text "Redirecting to Corporate Identity Provider..." |
-| **Authentication Error** | Invalid token signature, expired code, or state mismatch | Error alert banner with retry action and security log correlation ID |
-| **Access Denied (Insufficient Role)** | Authenticated user lacks authorized console roles | Warning banner indicating account lacks `admin`, `operator`, `auditor`, or `viewer` entitlement |
+| Scope | State | Condition | What the User Sees |
+|---|---|---|---|
+| Screen | **Default (Unauthenticated)** | No valid session active | Clean login card with primary SSO action and persona shortcuts in non-production |
+| Screen | **Authenticating / Redirecting** | Authorization handshake in flight | Spinner indicator with text "Redirecting to Corporate Identity Provider..." |
+| Screen | **Authentication Error** | Invalid token signature, expired code, or state mismatch | Error alert banner with retry action and security log correlation ID |
+| Screen | **Access Denied (Insufficient Role)** | Authenticated user lacks authorized console roles | Warning banner indicating account lacks `admin`, `operator`, `auditor`, or `viewer` entitlement |

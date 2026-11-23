@@ -1,11 +1,9 @@
 ## Screen 2: Live Traffic Inspector
 
 **Route:** `/inspector`
-**Platform:** Web
-**Presentation:** Page
+**Device Classes:** All
 **Purpose:** Provide real-time streaming inspection of all JSON-RPC 2.0 tool calls, parameter schemas, and security evaluation decisions passing through the gateway.
 **Visual Focus:** Live-updating streaming event table with real-time status badges (Allowed, Blocked, Pending HITL).
-**Action Hierarchy:** Primary: Pause / Resume Stream; Secondary: Filter by Agent / Decision; Tertiary: Clear Inspection Buffer.
 **Entry Points:** [Security Dashboard](01-dashboard.md), or left navigation rail.
 **Exit Points:** [Security Dashboard](01-dashboard.md), [Approvals Queue](03-approvals-queue.md), [Policy Manager](04-policy-manager.md).
 
@@ -20,13 +18,13 @@
 
 ### Components
 
-| Component | Type | Platform | Purpose | Data Source |
-|---|---|---|---|---|
-| Stream controls | Toolbar | Web | Controls SSE streaming buffer and auto-scroll | Client state |
-| Filter bar | Form | Web | Filters live event stream by status, agent, and tool | Client-side filter |
-| Traffic stream table | Table | Web | Displays real-time JSON-RPC tool invocations | GET `/api/v1/stream/traffic` (SSE) |
-| Event detail drawer | Panel | Web | Shows formatted JSON payloads, rule traces, and redactions | Selected event payload |
-| Redaction pill | Badge | Web | Highlights masked secrets or PII tokens in payload | Parsed DLP metadata |
+| Component | Type | Purpose | Available On | Priority | Data Source |
+|---|---|---|---|---|---|
+| Stream controls | Toolbar | Pauses and resumes the stream, toggles auto-scroll, and clears the inspection buffer | Mobile, Tablet, Desktop | Primary | READ[Screen state(streamPaused, autoScroll, bufferCount)]; WRITE[Screen state(streamPaused, autoScroll)] |
+| Filter bar | Form | Filters live event stream by status, agent, and tool | Mobile, Tablet, Desktop | Secondary | READ[AgentIdentity(id, name)]; WRITE[Screen state(activeFilters)] |
+| Traffic stream table | Table | Displays real-time JSON-RPC tool invocations | Mobile, Tablet, Desktop | — | READ[Screen state(trafficBuffer)] |
+| Event detail drawer | Panel | Shows formatted JSON payloads, rule traces, and redactions | Mobile, Tablet, Desktop | — | READ[Screen state(selectedEvent)] |
+| Redaction pill | Badge | Highlights masked secrets or PII tokens in payload | Mobile, Tablet, Desktop | — | READ[Screen state(redactionSummary)] |
 
 ### Data Requirements
 
@@ -49,13 +47,13 @@
 
 ### States
 
-| State | Condition | What the User Sees |
-|---|---|---|
-| **Streaming** | Active SSE connection receiving events | Table live-updating; green "Live" indicator pulsing in header |
-| **Paused** | Administrator clicked "Pause" | Stream paused indicator; new events buffered in background counter |
-| **Empty** | No tool calls during inspection window | Empty-state message: "Waiting for agent tool activity..." with network pulse indicator |
-| **Reconnecting** | SSE stream disconnected | Amber banner: "Reconnecting to live traffic stream..." with retry spinner; the client retries with exponential backoff from 1 second to 30 seconds |
-| **Filtered Empty** | Active filters match zero current events | "No events match the selected filters" with "Reset Filters" button |
+| Scope | State | Condition | What the User Sees |
+|---|---|---|---|
+| Traffic stream table | **Streaming** | Active SSE connection receiving events | Table live-updating; green "Live" indicator pulsing in header |
+| Screen | **Paused** | Administrator clicked "Pause" | Stream paused indicator; new events buffered in background counter |
+| Traffic stream table | **Empty** | No tool calls during inspection window | Empty-state message: "Waiting for agent tool activity..." with network pulse indicator |
+| Screen | **Reconnecting** | SSE stream disconnected | Amber banner: "Reconnecting to live traffic stream..." with retry spinner; the client retries with exponential backoff from 1 second to 30 seconds |
+| Traffic stream table | **Filtered Empty** | Active filters match zero current events | "No events match the selected filters" with "Reset Filters" button |
 
 **Edge Cases:**
 - High traffic flood (> 5,000 events/second) → Automatically engage visual sampling mode (render summary aggregates, buffer raw events in memory) to prevent browser DOM freezing.

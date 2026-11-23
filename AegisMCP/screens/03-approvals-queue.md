@@ -1,11 +1,9 @@
 ## Screen 3: Approvals Queue
 
 **Route:** `/approvals`
-**Platform:** Web
-**Presentation:** Page
+**Device Classes:** All
 **Purpose:** Provide an actionable human-in-the-loop review inbox where administrators can inspect, authorize, or reject suspended high-risk agent tool calls before execution.
 **Visual Focus:** Pending approval item cards displaying countdown timers and parameter risk summaries.
-**Action Hierarchy:** Primary: Approve Request; Secondary: Reject Request; Tertiary: Batch Approve (with multi-select).
 **Entry Points:** [Security Dashboard](01-dashboard.md), [Live Traffic Inspector](02-live-inspector.md), or deep link from Slack notification.
 **Exit Points:** [Security Dashboard](01-dashboard.md), [Live Traffic Inspector](02-live-inspector.md), [Audit Explorer](05-audit-explorer.md).
 
@@ -21,14 +19,14 @@
 
 ### Components
 
-| Component | Type | Platform | Purpose | Data Source |
-|---|---|---|---|---|
-| Tab bar | Tabs | Web | Switches between the pending queue and the approved and rejected-or-expired history | Client state |
-| Approval card | Card | Web | Displays details, parameter diffs, agent intent, and action buttons | GET `/api/v1/approvals/pending` |
-| Countdown timer | Badge | Web | Visualizes remaining TTL before automatic expiration | Client timer based on `expires_at` |
-| Parameter inspector | Table | Web | Shows formatted input arguments and risk annotations | Item payload |
-| Rejection dialog | Modal | Web | Captures mandatory human rejection reason | User input |
-| History list | Table | Web | Lists resolved tickets for the selected history tab with resolution time, reviewer, and rejection reason | GET `/api/v1/approvals` filtered by the selected history status |
+| Component | Type | Purpose | Available On | Priority | Data Source |
+|---|---|---|---|---|---|
+| Tab bar | Tabs | Switches between the pending queue and the approved and rejected-or-expired history | Mobile, Tablet, Desktop | — | READ[Screen state(activeTab)] |
+| Approval card | Card | Displays details, parameter diffs, agent intent, and the approve or reject actions | Mobile, Tablet, Desktop | Primary | READ[ApprovalTicket(id, agentId, toolName, argumentsPayload, agentIntent, triggerPolicyId, createdAt, expiresAt)] |
+| Countdown timer | Badge | Visualizes remaining TTL before automatic expiration | Mobile, Tablet, Desktop | — | READ[ApprovalTicket(expiresAt)] |
+| Parameter inspector | Table | Shows formatted input arguments and risk annotations | Mobile, Tablet, Desktop | — | READ[ApprovalTicket(argumentsPayload)] |
+| Rejection dialog | Modal | Captures mandatory human rejection reason | Mobile, Tablet, Desktop | — | WRITE[ApprovalTicket(status, reviewedBy, rejectionReason, processedAt)] |
+| History list | Table | Lists resolved tickets for the selected history tab with resolution time, reviewer, and rejection reason | Mobile, Tablet, Desktop | — | READ[ApprovalTicket(id, agentId, toolName, status, reviewedBy, rejectionReason, processedAt)] |
 
 ### Overlays
 
@@ -51,15 +49,15 @@
 
 ### States
 
-| State | Condition | What the User Sees |
-|---|---|---|
-| **Loading** | Fetching pending queue | Skeleton card placeholders with pulsing animated lines |
-| **Loaded** | One or more requests pending | List of approval cards ordered by urgency (least TTL remaining first) |
-| **Empty** | Zero items in pending queue | Clean illustration + "All clear — no pending agent actions requiring human approval" |
-| **Expired** | Timer reaches 00:00 while card is on screen | Card automatically fades out and transitions to Expired tab with notice |
-| **History Loading** | Fetching the selected history tab | Skeleton rows beneath the active history tab |
-| **History Empty** | Selected history tab has no resolved tickets | "No resolved requests in this status yet" with the active tab named |
-| **Error** | API request failure | Error banner with "Retry Loading Queue" action |
+| Scope | State | Condition | What the User Sees |
+|---|---|---|---|
+| Screen | **Loading** | Fetching pending queue | Skeleton card placeholders with pulsing animated lines |
+| Screen | **Loaded** | One or more requests pending | List of approval cards ordered by urgency (least TTL remaining first) |
+| Screen | **Empty** | Zero items in pending queue | Clean illustration + "All clear — no pending agent actions requiring human approval" |
+| Approval card | **Expired** | Timer reaches 00:00 while card is on screen | Card automatically fades out and transitions to Expired tab with notice |
+| History list | **History Loading** | Fetching the selected history tab | Skeleton rows beneath the active history tab |
+| History list | **History Empty** | Selected history tab has no resolved tickets | "No resolved requests in this status yet" with the active tab named |
+| Screen | **Error** | API request failure | Error banner with "Retry Loading Queue" action |
 
 **Edge Cases:**
 - Two administrators review the same ticket concurrently and one approves before the other → Second administrator's action returns "Ticket already resolved by [User]" and refreshes row.

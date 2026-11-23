@@ -1,11 +1,9 @@
 ## Screen 1: Security Dashboard
 
 **Route:** `/dashboard`
-**Platform:** Web
-**Presentation:** Page
+**Device Classes:** All
 **Purpose:** Provide security and platform administrators with an immediate overview of fleet health, real-time tool invocation volume, blocked security violations, and pending approvals.
 **Visual Focus:** High-contrast Fleet Security Status indicator card flanked by real-time metric counters.
-**Action Hierarchy:** Primary: Review Pending Approvals (when pending > 0), or Release Lockdown while a lockdown is in force; Secondary: Open Live Inspector; Tertiary: Export Daily Audit Summary.
 **Entry Points:** Navigated directly on login or via main navigation sidebar.
 **Exit Points:** [Live Traffic Inspector](02-live-inspector.md), [Approvals Queue](03-approvals-queue.md), [Policy Manager](04-policy-manager.md), [Audit Explorer](05-audit-explorer.md).
 
@@ -21,14 +19,14 @@
 
 ### Components
 
-| Component | Type | Platform | Purpose | Data Source |
-|---|---|---|---|---|
-| Top bar | Navbar | Web | Displays branding, cluster selection, and user session | Auth context & cluster config |
-| Threat banner | Panel | Web | Shows global security posture and the lockdown or release action | GET `/api/v1/system/status` |
-| Metric card grid | Grid | Web | Displays key operational counters | GET `/api/v1/metrics/summary` |
-| Invocations chart | Card | Web | Visualizes throughput and violation spikes | GET `/api/v1/metrics/timeseries` |
-| Approvals widget | Card | Web | Lists actionable pending approvals with countdowns | GET `/api/v1/approvals/pending?limit=3` |
-| Recent incidents | Table | Web | Lists recent blocked prompt injection / chaining violations | GET `/api/v1/audit/violations?limit=5` |
+| Component | Type | Purpose | Available On | Priority | Data Source |
+|---|---|---|---|---|---|
+| Top bar | Navbar | Displays branding, cluster selection, and user session | Mobile, Tablet, Desktop | — | READ[ConsoleOperatorSession(name, roles, idp)] |
+| Threat banner | Panel | Shows global security posture and the lockdown or release action | Mobile, Tablet, Desktop | Secondary | READ[Screen state(threatLevel, fleetStatus)] |
+| Metric card grid | Grid | Displays key operational counters | Mobile, Tablet, Desktop | — | READ[Screen state(activeAgentCount, toolCallCount, blockedViolationCount, pendingApprovalCount)] |
+| Invocations chart | Card | Visualizes throughput and violation spikes | Mobile, Tablet, Desktop | — | READ[Screen state(throughputBuckets)] |
+| Approvals widget | Card | Lists actionable pending approvals with countdowns | Mobile, Tablet, Desktop | Primary | READ[ApprovalTicket(id, agentId, toolName, expiresAt)] |
+| Recent incidents | Table | Lists recent blocked prompt injection / chaining violations | Mobile, Tablet, Desktop | — | READ[SecurityViolation(id, agentId, violationType, severity, createdAt)] |
 
 ### Overlays
 
@@ -54,14 +52,14 @@
 
 ### States
 
-| State | Condition | What the User Sees |
-|---|---|---|
-| **Loading** | Initial metrics fetching | Skeleton rectangular placeholders across all metric cards and chart |
-| **Loaded** | Metrics successfully retrieved | Full dashboard with live counters and active trend visualization |
-| **Elevated Threat** | Blocked violations exceed baseline threshold | Amber warning banner on threat panel with link to filtered Live Inspector |
-| **Lockdown** | Global kill-switch tripped | High-visibility crimson banner across the top naming the lockdown, carrying the Release Lockdown action for an operator holding `operator` or `admin`, and marking proxy status Quarantined |
-| **Error** | API telemetry endpoint unreachable | Error alert banner with "Retry Connection" button |
-| **Offline** | Browser loses internet connection | Persistent top warning banner: "Offline — telemetry paused" |
+| Scope | State | Condition | What the User Sees |
+|---|---|---|---|
+| Screen | **Loading** | Initial metrics fetching | Skeleton rectangular placeholders across all metric cards and chart |
+| Screen | **Loaded** | Metrics successfully retrieved | Full dashboard with live counters and active trend visualization |
+| Screen | **Elevated Threat** | Blocked violations exceed baseline threshold | Amber warning banner on threat panel with link to filtered Live Inspector |
+| Screen | **Lockdown** | Global kill-switch tripped | High-visibility crimson banner across the top naming the lockdown, carrying the Release Lockdown action for an operator holding `operator` or `admin`, and marking proxy status Quarantined |
+| Screen | **Error** | API telemetry endpoint unreachable | Error alert banner with "Retry Connection" button |
+| Screen | **Offline** | Browser loses internet connection | Persistent top warning banner: "Offline — telemetry paused" |
 
 **Edge Cases:**
 - Zero connected agents (fresh cluster deployment) → Display onboarding banner with link to Kubernetes Helm chart and local CLI setup guides.
