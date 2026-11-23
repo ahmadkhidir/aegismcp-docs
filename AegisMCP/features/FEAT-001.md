@@ -64,7 +64,7 @@ The same listener serves two unauthenticated probe endpoints that expose no tena
 **Edge Cases & Failure States:**
 - Malformed JSON or non-spec JSON-RPC message → Return standard JSON-RPC error response (`-32700 Parse error` or `-32600 Invalid Request`) and abort upstream forwarding.
 - Upstream MCP server crash or unhandled timeout → Return JSON-RPC internal error (`-32603`) to the agent, terminate the upstream socket, and log an upstream connection failure event.
-- SSE stream closes while a tool call is in flight or awaiting approval → Abandon the call, cancel the approval ticket, mark the Slack message expired, and refuse the session's message URL.
+- SSE stream closes while a tool call is in flight or awaiting approval → Abandon the call, cancel the approval ticket, refuse the session's message URL, and record the cancellation in the audit ledger and Web Console approval history ([FEAT-006](FEAT-006.md)).
 - Upstream response carries an `id` that matches no in-flight request in the session → Discard the response and never deliver it to another session.
 - Two requests on one streaming connection carry the same `id` → Reject the second with `-32600` and forward only the first.
 - WebSocket ping is answered after the 45-second window → The connection is already closed; the late pong is ignored and no session is restored.
