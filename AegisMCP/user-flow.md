@@ -97,8 +97,9 @@ graph TD
 - AegisMCP terminates the TLS handshake immediately with an untrusted client error and records a security incident alert.
 
 **Alternate Path B — Emergency Kill-Switch Activated:**
-- While the agent pod is running, Marcus detects anomalous behavior and runs `kubectl exec -it <pod> -c aegis-sidecar -- aegis-cli kill --all`.
-- AegisMCP severs all active JSON-RPC streaming sockets immediately and rejects any new connection attempts until reset.
+- While the agent pod is running, Marcus detects anomalous behavior and runs `kubectl exec -it <pod> -c aegis-sidecar -- aegis-cli kill --target-type global --confirm-lockdown --second-approver <operator>`.
+- This is an Enterprise production deployment, so the cluster-wide lockdown requires a second operator: Marcus completes a fresh multi-factor re-confirmation, a different operator or admin with an active authenticated session confirms the action, and Marcus supplies that operator's identity with `--second-approver`. A request missing `--confirm-lockdown`, the fresh re-confirmation, or a distinct confirming second operator is refused and leaves the fleet running.
+- AegisMCP severs all active JSON-RPC streaming sockets immediately and rejects any new connection attempts cluster-wide until an operator releases the lockdown.
 
 ### States & Overlays Referenced
 
