@@ -77,7 +77,7 @@ Workflows execute the commercial policies defined in [monetization](monetization
 |---|---|---|
 | `RB-01: Gateway Latency Spike Mitigation` | Added latency exceeds 5ms ([NFR-001](nfr.md)); checks Java 21 Virtual Thread saturation and triggers HPA scale-out | Platform Engineering |
 | `RB-02: Active Prompt Injection Containment` | Critical violation alert; immediately quarantines agent ID and severs compromised upstream tool connections | DevSecOps Engineering |
-| `RB-03: Slack Approval Webhook Outage Fallback` | Slack webhook failure; reroutes pending tickets to Web Console Approvals Queue ([screens](screens.md)) | DevSecOps Engineering |
+| `RB-03: Slack Approval Notification Fallback` | Slack delivery failure, or a posted approval message whose ticket has already expired, been cancelled, or been resolved; the console queue is authoritative, and an expired ticket has already failed its call closed ([FEAT-006](features/FEAT-006.md), [screens](screens.md)) | DevSecOps Engineering |
 | `RB-04: Cryptographic Ledger Discrepancy Audit` | SHA-256 hash mismatch detected; identifies damaged block, isolates WAL storage, alerts compliance | Compliance & Security |
 | `RB-05: Emergency Global Lockdown & Staged Release` | Rogue agent loop or zero-day vulnerability; trips cluster-wide circuit breaker, releases quarantines and lockdown as conditions clear, and manages staged recovery | Platform Engineering |
 | `RB-06: Data Subject Request (DSR) Execution` | GDPR/CCPA subject erasure request; anonymizes reviewer identifiers across audit and analytics stores ([schema](schema.md)) | Compliance Officer |
@@ -91,6 +91,7 @@ Workflows execute the commercial policies defined in [monetization](monetization
 |---|---|---|
 | Support SLA Compliance | Automated ticket turnaround analysis against target thresholds | Monthly |
 | Administrative Audit Completeness | Every administrative action taken through the console, the command line, or the policy pipeline reconciles to a sealed administrative audit entry ([schema](schema.md)) | Monthly |
+| Approval Expiry Reconciliation | A ticket that reaches its time-to-live reconciles to a sealed interaction record and to the console expired history, while its Slack message stays as posted | Monthly |
 | Disaster Recovery & Kill-Switch Drill | Simulated lockdown, quarantine release, and failover dry-run in staging environment | Quarterly |
 | Billing & Dunning Reconciliation | Verification of Stripe webhook handling against active entitlement status | Monthly |
 | Compliance Export Integrity | Generate one EU AI Act and one SOC 2 export, then verify each signature and Merkle root against the ledger and the published key | Quarterly |
