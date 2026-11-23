@@ -28,8 +28,14 @@ AegisMCP is structured around a non-blocking, zero-copy protocol proxy engine bu
 ### Component: Policy-as-Code Evaluation Engine
 **Responsibility:** Evaluates incoming `tools/call` and `resources/read` invocations against active declarative security policies with sub-millisecond latency.
 **Provides:** Deterministic Allow / Block / Require-Approval authorization decisions.
-**Consumes:** Policy Storage & In-Memory Cache, Tool Parameter Schema Validator ([FEAT-002](features/FEAT-002.md)).
+**Consumes:** Policy Lifecycle Manager (compiled active policy), Tool Parameter Schema Validator ([FEAT-002](features/FEAT-002.md)).
 **Platform Notes:** Evaluates pre-compiled abstract syntax trees (AST) in memory to achieve sub-millisecond evaluation ([NFR-001](nfr.md)).
+
+### Component: Policy Lifecycle Manager
+**Responsibility:** Validates, compiles, and activates policy versions, keeping exactly one compiled policy in force for traffic.
+**Provides:** Draft publication, base-version-checked activation, GitOps document reload, the version catalogue, and an administrative audit record for every policy change.
+**Consumes:** Policy Version Store, GitOps Policy Repository, Policy-as-Code Evaluation Engine (compiled policy handoff), Tamper-Evident Audit Ledger ([FEAT-002](features/FEAT-002.md)).
+**Platform Notes:** In a managed deployment, activation arrives through the management interface and swaps the compiled policy atomically. In a GitOps-managed deployment, the manager watches the policy document delivered with the deployment, reloads it on content change, and refuses direct activation. A rejected document leaves the previous policy in force.
 
 ### Component: Stateful Chaining Anomaly Engine
 **Responsibility:** Tracks multi-step tool execution sequences across an agent session to detect and intercept data exfiltration sequences.
@@ -77,13 +83,15 @@ AegisMCP is structured around a non-blocking, zero-copy protocol proxy engine bu
 |---|---|---|---|
 | Policy Cache & Session State | In-Memory (Java Concurrent Hash Maps) | Compiled policy rules, active session sequences, rate limit counters | Microsecond reads on every tool call, TTL-based session eviction |
 | Tamper-Evident Audit Ledger | Append-Only Disk Store (WAL) | Cryptographically linked JSON audit records, hash chains, digital signatures | Sequential append-only writes, sequential range reads for audits |
-| Central Policy Repository | GitOps / Relational Database | Version-controlled YAML policies, tool whitelist catalogs, RBAC assignments | Read on startup and dynamic reload on configuration change |
+| Policy Version Store | Relational Database | Published draft and active policy versions with their YAML, status, and originating commit | Write on publish and activation; read by the catalogue and at startup to load the active policy |
+| GitOps Policy Repository | Version-controlled Git repository (external) | The authoritative policy document in GitOps-managed deployments, with the review history of every change | Read at startup and watched for content change; written only through pull requests |
 
 ### Data Flow Patterns
 
 - **Synchronous Fast Path:** Agent Client → Ingress Transport → Identity Verification → Policy Evaluation Engine → Upstream MCP Server → Outbound DLP Scrubber → Agent Client. Enforces strict sub-5ms P99 latency budget ([NFR-001](nfr.md)).
 - **Asynchronous Telemetry Path:** Completed tool call events are dispatched non-blockingly to the Tamper-Evident Audit Ledger and streamed to the Web Console Live Inspector via Server-Sent Events ([NFR-004](nfr.md), [NFR-005](nfr.md)).
 - **Suspended Approval Path:** Sensitive tool call matched → Gateway generates approval token and suspends agent transport socket → Dispatches webhook to Slack/Web Console → Awaits human decision → On "Approve", releases tool call upstream; on "Reject" or timeout, returns error.
+- **Policy Activation Path:** A published version is validated, compiled, and swapped into the in-memory policy cache atomically, so a rejected document leaves the previous policy serving traffic. In a GitOps-managed deployment the change enters through the repository instead: the gateway reloads the delivered policy document on content change and records the commit that introduced it.
 
 ---
 
@@ -141,6 +149,7 @@ flowchart TD
         Dispatcher["Ingress Protocol Dispatcher (Netty/Loom)"]
         AuthModule["Agent Identity & Credential Verifier"]
         PolicyEngine["Policy-as-Code Engine (AST)"]
+        PolicyLifecycle["Policy Lifecycle Manager"]
         AnomalyEngine["Stateful Chaining Anomaly Engine"]
         HITLGateway["Human-in-the-Loop Gateway"]
         DLPScrubber["Outbound Secret & PII Scrubber"]
@@ -158,6 +167,7 @@ flowchart TD
         Slack["Slack Approval Webhook"]
         SIEM["Enterprise SIEM (Datadog/Splunk)"]
         WebConsole["Web Security Console"]
+        GitRepo["GitOps Policy Repository"]
     end
 
     AgentIDE -->|JSON-RPC over SSE/WS| Dispatcher
@@ -168,6 +178,11 @@ flowchart TD
     AuthModule -.->|Verify Token| IdP
     AuthModule --> PolicyEngine
     PolicyEngine --> AnomalyEngine
+
+    PolicyLifecycle -->|Compiled active policy| PolicyEngine
+    WebConsole -.->|Publish & activate| PolicyLifecycle
+    GitRepo -.->|Policy document| PolicyLifecycle
+    PolicyLifecycle -.->|Policy change audit| AuditLedger
 
     PolicyEngine -.->|Requires Approval| HITLGateway
     HITLGateway -.->|Interactive Prompt| Slack
