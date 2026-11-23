@@ -43,6 +43,9 @@ Every sensitive gateway subsystem is wrapped in a dynamic feature flag that can 
 | `enable_outbound_dlp_scrubber` | [FEAT-005](features/FEAT-005.md) | Disabled | Canary → 25% → 100% | Disables streaming token redaction; streams raw tool outputs upstream without payload buffering |
 | `enable_hitl_approval_gateway` | [FEAT-006](features/FEAT-006.md) | Disabled | Opt-in → 100% | Suspended execution bypassed; tools execute or fail-closed based on emergency override policy |
 | `enable_dynamic_schema_sanitizer` | [FEAT-012](features/FEAT-012.md) | Disabled | Beta → 100% | Reverts to basic JSON type checking without deep SQL injection and command token filtering |
+| `enable_compliance_export` | [FEAT-011](features/FEAT-011.md) | Disabled | Canary → 100% | Removes the export endpoint and its delivery channels; the audit ledger and its integrity verification are unaffected |
+
+**Not flag-gated:** The emergency kill-switch and its release ([FEAT-010](features/FEAT-010.md)) stay available in every phase, including a canary deployment under investigation.
 
 **Flag lifecycle:** Feature flags are permanently removed from the codebase within two release cycles after achieving 100% general availability soak without incident.
 
@@ -58,6 +61,7 @@ Automated health monitors continuously evaluate runtime telemetry. When a rollba
 | Protocol Error Rate | JSON-RPC 5xx or parser crash rate > 0.5% for 5 minutes | Automated rollback to previous container image tag | On-Call Platform Engineer |
 | Audit Ledger Integrity | Cryptographic SHA-256 hash mismatch detected during write | Divert traffic to standby node; halt non-audit writes; trigger [operations](operations.md) `RB-04` | On-Call Platform Engineer |
 | Security Policy False Positives | Legitimate tool call rejection rate > 3x baseline within 10 minutes | Revert active policy configuration to previous Git commit | DevSecOps Lead |
+| Compliance Export Integrity | Any export aborting on a broken hash chain in its reporting range | Disable `enable_compliance_export`; page Compliance & Security; trigger [operations](operations.md) `RB-04` | On-Call Platform Engineer |
 
 **Rollback procedure:**
 1. Automated Kubernetes deployment rollback (`kubectl rollout undo deployment/aegis-gateway`) restores previous container image within < 30 seconds.
@@ -75,6 +79,7 @@ A production release cannot deploy until every gate below is certified:
 - [ ] Security vulnerability scan clean: zero critical or high CVEs in base images ([NFR-028](nfr.md)).
 - [ ] Telemetry event taxonomy and conversion tracking verified in [analytics](analytics.md).
 - [ ] Automated rollback drill executed and validated in Staging environment.
+- [ ] Emergency kill, quarantine release, and cross-node signal propagation exercised on a multi-node Staging cluster ([FEAT-010](features/FEAT-010.md)).
 - [ ] Operational runbooks updated and on-call rotation active in [operations](operations.md).
 - [ ] Web Admin Console navigation and live stream performance verified in [screens](screens.md).
 - [ ] Stakeholders and enterprise design partners notified with release window and maintenance notice.

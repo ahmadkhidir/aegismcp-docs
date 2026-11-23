@@ -24,15 +24,15 @@ AegisMCP operates under a hybrid support and operational model. Open-core Commun
 **Roles and permissions:**
 | Role | Can view | Can change | Approval required for |
 |---|---|---|---|
-| Platform Engineer | Gateway telemetry, active sessions, system health | Concurrency limits, HPA scaling, cluster config | Emergency Global Kill-Switch ([FEAT-010](features/FEAT-010.md)) |
+| Platform Engineer | Gateway telemetry, active sessions, system health | Concurrency limits, HPA scaling, cluster config, emergency kill and release ([FEAT-010](features/FEAT-010.md)) | — |
 | DevSecOps Engineer | Traffic streams, violation alerts, audit records | Security policies ([FEAT-002](features/FEAT-002.md)), approval tickets ([FEAT-006](features/FEAT-006.md)) | Production policy deployment |
 | Compliance Auditor | Cryptographic ledger, compliance reports, verify proofs | Generate compliance exports ([FEAT-011](features/FEAT-011.md)) | Subject deletion / DSR requests |
 | System Admin | All tenant metadata, user accounts, SSO/RBAC | Role assignments, billing tier, cluster binding | Tenant deletion |
 
 **Governance controls:**
-- **Least privilege:** All administrative operations are role-scoped via enterprise SSO and RBAC; shared administrator credentials are strictly prohibited.
-- **Audit trail:** Every administrative action (policy deployment, human approval decision, emergency kill-switch activation) is appended to the tamper-evident cryptographic ledger ([FEAT-007](features/FEAT-007.md)) and retained for 365 days ([NFR-041](nfr.md)).
-- **Break-glass procedure:** Tripping the Emergency Global Kill-Switch requires multi-factor authentication (MFA) and dual-operator authorization in Enterprise production clusters.
+- **Least privilege:** All administrative operations are role-scoped via enterprise SSO and RBAC; shared administrator credentials are strictly prohibited. System Admin and DevSecOps Engineer hold `admin`; Platform Engineer holds `operator`; Compliance Auditor holds `auditor`; read-only observers hold `viewer`.
+- **Audit trail:** Every administrative action (policy deployment, human approval decision, emergency kill-switch and release action) is appended to the tamper-evident cryptographic ledger ([FEAT-007](features/FEAT-007.md)) and retained for 365 days ([NFR-041](nfr.md)).
+- **Break-glass procedure:** Global lockdown and global release are break-glass actions carrying the operator re-confirmation defined in [FEAT-010](features/FEAT-010.md); Security Engineering reviews every use within one business day and records the outcome against the invoking operator.
 
 **Enterprise Identity Provider (SSO / OIDC) Federation:**
 Production Web Console deployments federate operator access via OpenID Connect (OIDC Core 1.0) with RFC 7636 Authorization Code Flow and Proof Key for Code Exchange (PKCE with SHA-256). The console integrates with enterprise Identity Providers (Okta, Keycloak, Microsoft Entra ID, Ping Identity) using standard parameters:
@@ -79,8 +79,9 @@ Workflows execute the commercial policies defined in [monetization](monetization
 | `RB-02: Active Prompt Injection Containment` | Critical violation alert; immediately quarantines agent ID and severs compromised upstream tool connections | DevSecOps Engineering |
 | `RB-03: Slack Approval Webhook Outage Fallback` | Slack webhook failure; reroutes pending tickets to Web Console Approvals Queue ([screens](screens.md)) | DevSecOps Engineering |
 | `RB-04: Cryptographic Ledger Discrepancy Audit` | SHA-256 hash mismatch detected; identifies damaged block, isolates WAL storage, alerts compliance | Compliance & Security |
-| `RB-05: Emergency Global Lockdown & Reset` | Rogue agent loop or zero-day vulnerability; trips cluster-wide circuit breaker and manages staged recovery | Platform Engineering |
+| `RB-05: Emergency Global Lockdown & Staged Release` | Rogue agent loop or zero-day vulnerability; trips cluster-wide circuit breaker, releases quarantines and lockdown as conditions clear, and manages staged recovery | Platform Engineering |
 | `RB-06: Data Subject Request (DSR) Execution` | GDPR/CCPA subject erasure request; anonymizes reviewer identifiers across audit and analytics stores ([schema](schema.md)) | Compliance Officer |
+| `RB-07: Compliance Export Delivery Failure` | Signed export undelivered after the retry window; re-runs the export and re-delivers the archive to the notification channels | Compliance Auditor |
 
 ---
 
@@ -90,5 +91,6 @@ Workflows execute the commercial policies defined in [monetization](monetization
 |---|---|---|
 | Support SLA Compliance | Automated ticket turnaround analysis against target thresholds | Monthly |
 | Administrative Audit Completeness | Verification of administrative action logs against cryptographic ledger entries | Monthly |
-| Disaster Recovery & Kill-Switch Drill | Simulated emergency lockdown and failover dry-run in staging environment | Quarterly |
+| Disaster Recovery & Kill-Switch Drill | Simulated lockdown, quarantine release, and failover dry-run in staging environment | Quarterly |
 | Billing & Dunning Reconciliation | Verification of Stripe webhook handling against active entitlement status | Monthly |
+| Compliance Export Integrity | Generate one EU AI Act and one SOC 2 export, then verify each signature and Merkle root against the ledger and the published key | Quarterly |
