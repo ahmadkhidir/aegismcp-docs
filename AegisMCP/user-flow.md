@@ -153,7 +153,7 @@ graph TD
 | Screen or Overlay | States |
 |---|---|
 | Approvals Queue Screen | Empty, Pending Items, Reviewing Item, Action Submitted |
-| Slack Interactive Card | Pending, Approved, Rejected, Expired |
+| Slack Interactive Card | Pending, Approved, Rejected, Outcome Reported After Expiry |
 | Action Rejection Modal (Overlay) | Default, Submitting Rejection Note |
 
 ---
