@@ -2,14 +2,14 @@
 
 ## Screen Inventory
 
-| # | Screen Name | File | Route / Path | Platform | Related Features |
+| # | Screen Name | File | Route / Path | Device Classes | Related Features |
 |---|---|---|---|---|---|
-| 0 | Enterprise SSO / OIDC Login | [00-login](screens/00-login.md) | `/login` | Web | [FEAT-008](features/FEAT-008.md), [FEAT-009](features/FEAT-009.md), [NFR-029](nfr.md) |
-| 1 | Security Dashboard | [01-dashboard](screens/01-dashboard.md) | `/dashboard` | Web | [FEAT-008](features/FEAT-008.md), [FEAT-010](features/FEAT-010.md) |
-| 2 | Live Traffic Inspector | [02-live-inspector](screens/02-live-inspector.md) | `/inspector` | Web | [FEAT-001](features/FEAT-001.md), [FEAT-004](features/FEAT-004.md), [FEAT-005](features/FEAT-005.md), [FEAT-008](features/FEAT-008.md) |
-| 3 | Approvals Queue | [03-approvals-queue](screens/03-approvals-queue.md) | `/approvals` | Web | [FEAT-006](features/FEAT-006.md), [FEAT-008](features/FEAT-008.md) |
-| 4 | Policy Manager | [04-policy-manager](screens/04-policy-manager.md) | `/policies` | Web | [FEAT-002](features/FEAT-002.md), [FEAT-012](features/FEAT-012.md) |
-| 5 | Audit Explorer | [05-audit-explorer](screens/05-audit-explorer.md) | `/audit` | Web | [FEAT-007](features/FEAT-007.md), [FEAT-011](features/FEAT-011.md) |
+| 0 | Enterprise SSO / OIDC Login | [00-login](screens/00-login.md) | `/login` | All | [FEAT-008](features/FEAT-008.md), [FEAT-009](features/FEAT-009.md), [NFR-029](nfr.md) |
+| 1 | Security Dashboard | [01-dashboard](screens/01-dashboard.md) | `/dashboard` | All | [FEAT-008](features/FEAT-008.md), [FEAT-010](features/FEAT-010.md) |
+| 2 | Live Traffic Inspector | [02-live-inspector](screens/02-live-inspector.md) | `/inspector` | All | [FEAT-001](features/FEAT-001.md), [FEAT-004](features/FEAT-004.md), [FEAT-005](features/FEAT-005.md), [FEAT-008](features/FEAT-008.md) |
+| 3 | Approvals Queue | [03-approvals-queue](screens/03-approvals-queue.md) | `/approvals` | All | [FEAT-006](features/FEAT-006.md), [FEAT-008](features/FEAT-008.md) |
+| 4 | Policy Manager | [04-policy-manager](screens/04-policy-manager.md) | `/policies` | All | [FEAT-002](features/FEAT-002.md), [FEAT-012](features/FEAT-012.md) |
+| 5 | Audit Explorer | [05-audit-explorer](screens/05-audit-explorer.md) | `/audit` | All | [FEAT-007](features/FEAT-007.md), [FEAT-011](features/FEAT-011.md) |
 
 ---
 

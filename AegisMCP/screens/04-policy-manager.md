@@ -1,11 +1,9 @@
 ## Screen 4: Policy Manager
 
 **Route:** `/policies`
-**Platform:** Web
-**Presentation:** Page
+**Device Classes:** All
 **Purpose:** Allow security and platform engineers to author, inspect, simulate, and deploy declarative Policy-as-Code rules governing agent access to MCP tools.
 **Visual Focus:** Split-pane interface featuring a YAML policy editor alongside an interactive Rule Test Simulator.
-**Action Hierarchy:** Primary: Deploy Changes (or "Create PR" in GitOps mode); Secondary: Test Policy against Sample Invocations; Tertiary: Discard Draft.
 **Entry Points:** [Security Dashboard](01-dashboard.md), [Live Traffic Inspector](02-live-inspector.md).
 **Exit Points:** [Security Dashboard](01-dashboard.md), [Live Traffic Inspector](02-live-inspector.md).
 
@@ -20,13 +18,13 @@
 
 ### Components
 
-| Component | Type | Platform | Purpose | Data Source |
-|---|---|---|---|---|
-| Version bar | Toolbar | Web | Displays the active policy version, its last-modified time, the Git commit that introduced it, and GitOps sync state | GET `/api/v1/policies/active` |
-| Policy list | List | Web | Selects between active policies, draft versions, and templates | GET `/api/v1/policies` |
-| Code editor | Panel | Web | Edits YAML policy rules with schema validation and linting | Local editor state |
-| Simulator panel | Card | Web | Interactive form to test rule evaluation against mock payloads | POST `/api/v1/policies/simulate` |
-| Diff viewer | Dialog | Web | Visualizes differences between active policy and current draft | Client-side diff |
+| Component | Type | Purpose | Available On | Priority | Data Source |
+|---|---|---|---|---|---|
+| Version bar | Toolbar | Displays the active policy version, its last-modified time, the Git commit that introduced it, and GitOps sync state, and starts the deployment | Mobile, Tablet, Desktop | Primary | READ[SecurityPolicy(version, createdAt, gitCommitHash, status)]; WRITE[SecurityPolicy] |
+| Policy list | List | Selects between active policies, draft versions, and templates | Mobile, Tablet, Desktop | — | READ[SecurityPolicy(id, name, version, status)] |
+| Code editor | Panel | Edits YAML policy rules with schema validation and linting | Mobile, Tablet, Desktop | — | READ[SecurityPolicy(rawYaml)]; WRITE[SecurityPolicy(rawYaml)] |
+| Simulator panel | Card | Interactive form to test rule evaluation against mock payloads | Mobile, Tablet, Desktop | Secondary | READ[SecurityPolicy(rawYaml)]; WRITE[Screen state(simulationInput)] |
+| Diff viewer | Dialog | Visualizes differences between active policy and current draft | Mobile, Tablet, Desktop | — | READ[SecurityPolicy(rawYaml)]; READ[Screen state(draftPolicy)] |
 
 ### Overlays
 
@@ -49,13 +47,13 @@
 
 ### States
 
-| State | Condition | What the User Sees |
-|---|---|---|
-| **Clean** | Editor matches deployed policy | "Policy Active & Synced" green indicator |
-| **Draft Dirty** | Uncommitted edits in editor | Amber indicator: "Unsaved Changes" with "Diff" and "Deploy" enabled |
-| **Lint Error** | Invalid YAML syntax or unknown tool keyword | Inline red wavy underline in editor; error banner below editor with line number |
-| **Simulating** | Running test payload against rules | Spinner in simulation panel; displays green "ALLOWED" or red "BLOCKED" badge |
-| **Deploying** | Submitting policy update | Deploy button shows spinner; editor inputs temporarily disabled |
+| Scope | State | Condition | What the User Sees |
+|---|---|---|---|
+| Screen | **Clean** | Editor matches deployed policy | "Policy Active & Synced" green indicator |
+| Screen | **Draft Dirty** | Uncommitted edits in editor | Amber indicator: "Unsaved Changes" with "Diff" and "Deploy" enabled |
+| Code editor | **Lint Error** | Invalid YAML syntax or unknown tool keyword | Inline red wavy underline in editor; error banner below editor with line number |
+| Simulator panel | **Simulating** | Running test payload against rules | Spinner in simulation panel; displays green "ALLOWED" or red "BLOCKED" badge |
+| Screen | **Deploying** | Submitting policy update | Deploy button shows spinner; editor inputs temporarily disabled |
 
 **Edge Cases:**
 - Deploying a policy that blocks all tools cluster-wide → Display high-severity warning modal: "This policy blocks 100% of currently connected agents. Are you sure?"

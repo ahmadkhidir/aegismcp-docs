@@ -1,11 +1,9 @@
 ## Screen 5: Audit Explorer
 
 **Route:** `/audit`
-**Platform:** Web
-**Presentation:** Page
+**Device Classes:** All
 **Purpose:** Provide a forensic search, verification, and compliance reporting interface over the immutable, cryptographically hash-chained audit ledger.
 **Visual Focus:** Cryptographic Ledger Integrity status banner atop a dense, searchable event record table.
-**Action Hierarchy:** Primary: Export Compliance Report; Secondary: Refresh Ledger Integrity; Tertiary: Filter Records.
 **Entry Points:** [Security Dashboard](01-dashboard.md), [Approvals Queue](03-approvals-queue.md), or left navigation rail.
 **Exit Points:** [Security Dashboard](01-dashboard.md), [Live Traffic Inspector](02-live-inspector.md).
 
@@ -19,13 +17,13 @@
 
 ### Components
 
-| Component | Type | Platform | Purpose | Data Source |
-|---|---|---|---|---|
-| Integrity banner | Panel | Web | Shows the last completed SHA-256 ledger validation and its timestamp | GET `/api/v1/audit/integrity` |
-| Filter toolbar | Toolbar | Web | Filters historical audit records by date, agent, and hash | Client query state |
-| Audit record table | Table | Web | Displays searchable immutable ledger entries | GET `/api/v1/audit/records` |
-| Hash proof drawer | Panel | Web | Inspects SHA-256 block hash, parent hash, arguments hash, and digital signature | Selected block record |
-| Export dialog | Modal | Web | Configures compliance report format (EU AI Act, SOC 2) and reports generation and delivery outcome | User selection |
+| Component | Type | Purpose | Available On | Priority | Data Source |
+|---|---|---|---|---|---|
+| Integrity banner | Panel | Shows the last completed SHA-256 ledger validation and its timestamp | Mobile, Tablet, Desktop | Secondary | READ[Screen state(ledgerIntegrity)] |
+| Filter toolbar | Toolbar | Filters historical audit records by date, agent, and hash | Mobile, Tablet, Desktop | Tertiary | WRITE[Screen state(activeQuery)] |
+| Audit record table | Table | Displays searchable immutable ledger entries | Mobile, Tablet, Desktop | — | READ[AuditBlock(blockIndex, blockHash, timestamp, agentId, toolName, argumentsHash, decision, reviewedBy)] |
+| Hash proof drawer | Panel | Inspects SHA-256 block hash, parent hash, arguments hash, and digital signature | Mobile, Tablet, Desktop | — | READ[AuditBlock(blockIndex, blockHash, parentHash, argumentsHash)] |
+| Export dialog | Modal | Configures compliance report format (EU AI Act, SOC 2) and reports generation and delivery outcome | Mobile, Tablet, Desktop | Primary | WRITE[Screen state(exportRequest)] |
 
 ### Overlays
 
@@ -47,13 +45,13 @@
 
 ### States
 
-| State | Condition | What the User Sees |
-|---|---|---|
-| **Loading** | Records query in progress | Skeleton table rows with shimmering animation |
-| **Loaded** | Audit records retrieved | Populated table with monospace hash identifiers and status pills |
-| **Integrity Unavailable** | Ledger store unreachable | Warning banner showing the last known verification result and its time, with a "Retry Connection" action |
-| **Integrity Compromise** | Cryptographic hash mismatch detected | High-severity crimson alert banner identifying damaged block index |
-| **Empty Search** | Query returns zero matching records | "No audit records found matching the specified query criteria" |
+| Scope | State | Condition | What the User Sees |
+|---|---|---|---|
+| Screen | **Loading** | Records query in progress | Skeleton table rows with shimmering animation |
+| Screen | **Loaded** | Audit records retrieved | Populated table with monospace hash identifiers and status pills |
+| Integrity banner | **Integrity Unavailable** | Ledger store unreachable | Warning banner showing the last known verification result and its time, with a "Retry Connection" action |
+| Integrity banner | **Integrity Compromise** | Cryptographic hash mismatch detected | High-severity crimson alert banner identifying damaged block index |
+| Audit record table | **Empty Search** | Query returns zero matching records | "No audit records found matching the specified query criteria" |
 
 **Edge Cases:**
 - Exporting records across multi-gigabyte date ranges → Accept the request for background generation, show the accepted state, and deliver the signed archive through the deployment's notification channels; the console does not poll generation or delivery progress, and a delivery that exhausts its retry window is reported to the compliance notification channel.
