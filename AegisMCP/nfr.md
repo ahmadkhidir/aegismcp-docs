@@ -19,6 +19,8 @@ AegisMCP operates inline on the critical execution path between AI agents and ba
 | NFR-005 | Web Console live traffic broadcast | Event delivery | < 80ms / < 120ms / < 200ms | 500 concurrent SSE dashboard connections | Synthetic probe |
 | NFR-006 | Local CLI proxy process startup (`aegis-cli`) | Startup time | < 150ms / < 250ms / < 400ms | Local workstation, cold start | CLI benchmark |
 
+NFR-005 is measured from event emission at the gateway to the rendered update on an already-subscribed console; keepalive comments and reconnect attempts are transport liveness and are not counted as delivered events.
+
 **Throughput & capacity:**
 - **Peak concurrency:** Minimum 50,000 concurrent active streaming JSON-RPC sessions (HTTP/SSE or WebSocket) per gateway node without thread starvation, utilizing Java 21 Virtual Threads.
 - **Data volume:** Sustained processing of 500 MB/s aggregate tool payload throughput with heap memory constrained below 1.5 GB.
@@ -59,10 +61,10 @@ AegisMCP operates inline on the critical execution path between AI agents and ba
 | NFR-023 | Secrets Management | Zero hardcoded credentials; dynamic retrieval from HashiCorp Vault or Kubernetes Secrets | In-memory credentials scrubbed after use |
 | NFR-024 | Input Validation & Injection Defense | Strict JSON schema enforcement; path traversal and command injection token filtering | Mitigates OWASP LLM03 and command injection vectors |
 | NFR-025 | Outbound DLP & Redaction | Automated redaction of AWS, GitHub, GCP, OpenAI tokens, and credit card/SSN patterns | Aho-Corasick multi-pattern scanner with sub-2ms overhead |
-| NFR-026 | Audit Tamper-Evidence | Continuous SHA-256 cryptographic hash-chaining across all log entries | Any omitted or modified historical entry invalidates chain verification |
+| NFR-026 | Audit Tamper-Evidence | Continuous SHA-256 cryptographic hash-chaining across all log entries | Each sealed entry covers its argument digest and the resolving approver identity; any omitted or modified historical entry invalidates chain verification |
 | NFR-027 | Default Stance | Fail-closed: unmapped agent identities or undeclared tools denied execution | Explicit policy grant required for any tool invocation |
 | NFR-028 | Supply Chain Security | Zero critical or high severity CVEs in container base images and dependencies | Weekly automated SBOM scanning and dependency vulnerability gates |
-| NFR-029 | Administrative Access | Multi-Factor Authentication (MFA) and RBAC enforced for Web Console access | Session timeout after 15 minutes of inactivity |
+| NFR-029 | Administrative Access | Multi-Factor Authentication (MFA) and RBAC enforced for Web Console access | Session timeout after 15 minutes of inactivity; every console request and event-stream subscription carries the operator session |
 
 ---
 
