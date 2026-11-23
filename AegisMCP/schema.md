@@ -118,6 +118,10 @@ AegisMCP exchanges and persists structured data across its high-performance prox
       "type": "string",
       "description": "JSON-serialized input arguments passed to the tool."
     },
+    "agentIntent": {
+      "type": ["string", "null"],
+      "description": "Agent-supplied justification for the invocation, presented to the reviewer as the intent description; null when the call carried none."
+    },
     "status": {
       "type": "string",
       "enum": ["pending", "approved", "rejected", "expired"],
@@ -135,6 +139,11 @@ AegisMCP exchanges and persists structured data across its high-performance prox
       "type": "string",
       "description": "Contextual reason provided by the human reviewer on rejection."
     },
+    "processedAt": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Timestamp when a human decision resolved the ticket, used to order approval history; null while the ticket is pending."
+    },
     "expiresAt": {
       "type": "string",
       "format": "date-time",
@@ -146,7 +155,7 @@ AegisMCP exchanges and persists structured data across its high-performance prox
       "description": "Timestamp when the approval ticket was created (UTC)."
     }
   },
-  "required": ["id", "agentId", "toolName", "argumentsPayload", "status", "triggerPolicyId", "expiresAt", "createdAt"]
+  "required": ["id", "agentId", "toolName", "argumentsPayload", "agentIntent", "status", "triggerPolicyId", "expiresAt", "createdAt", "processedAt"]
 }
 ```
 
@@ -180,10 +189,18 @@ AegisMCP exchanges and persists structured data across its high-performance prox
       "type": "string",
       "description": "Name of the MCP tool invoked."
     },
+    "argumentsHash": {
+      "type": "string",
+      "description": "SHA-256 digest of the canonicalized request arguments sealed with the decision, so a recorded invocation can be matched to its parameter payload without storing or exporting the arguments."
+    },
     "decision": {
       "type": "string",
       "enum": ["allow", "block", "require_approval"],
       "description": "Gateway security decision applied to the interaction."
+    },
+    "reviewedBy": {
+      "type": ["string", "null"],
+      "description": "Verified operator identity that resolved the approval for this interaction; null when no approval applied (personal data)."
     },
     "redactionCount": {
       "type": "integer",
@@ -201,7 +218,7 @@ AegisMCP exchanges and persists structured data across its high-performance prox
       "description": "Immutable timestamp when the block was sealed (UTC)."
     }
   },
-  "required": ["blockIndex", "blockHash", "parentHash", "agentId", "toolName", "decision", "redactionCount", "latencyMs", "timestamp"]
+  "required": ["blockIndex", "blockHash", "parentHash", "agentId", "toolName", "argumentsHash", "decision", "reviewedBy", "redactionCount", "latencyMs", "timestamp"]
 }
 ```
 
@@ -312,6 +329,7 @@ AegisMCP exchanges and persists structured data across its high-performance prox
 - **ApprovalTicket** `agentId` references **AgentIdentity** — each approval request originates from exactly one authenticated agent.
 - **ApprovalTicket** `triggerPolicyId` references **SecurityPolicy** — each approval requirement is mandated by a rule in a specific policy.
 - **AuditBlock** `agentId` references **AgentIdentity** — each immutable ledger entry records an interaction executed by one agent.
+- **AuditBlock** `reviewedBy` names the **ConsoleOperatorSession** subject that resolved a required approval, so the decision and its approver are sealed in the same record.
 - **SecurityViolation** `agentId` references **AgentIdentity** — each security violation event is attributed to one agent identity.
 - **SecurityViolation** `blockHash` references **AuditBlock** — each security violation is sealed within an immutable audit block.
 - **ConsoleOperatorSession** `roles` govern administrative execution permissions across **SecurityPolicy**, **ApprovalTicket**, and **AuditBlock** actions.
@@ -323,4 +341,6 @@ AegisMCP exchanges and persists structured data across its high-performance prox
 In accordance with data governance obligations outlined in [nfr](nfr.md):
 - **ConsoleOperatorSession** `name` and `email`: Encapsulate authenticated human operator identity, governed by enterprise IdP directory retention and access policies.
 - **ApprovalTicket** `reviewedBy`: Contains human reviewer email or username. Subject to statutory access and deletion procedures.
+- **AuditBlock** `reviewedBy`: Repeats the resolving reviewer identity inside the sealed record so the approval decision travels with the ledger entry; governed by the same access and deletion procedures.
+- **AuditBlock** `argumentsHash`: Holds only a digest of the request arguments, so parameter material itself is never exposed through audit queries or exports.
 - **AuditBlock** and **SecurityViolation** records: Persisted in the tamper-evident ledger for 365 days under regulatory retention mandates ([NFR-041](nfr.md)), and archived in customer private storage.

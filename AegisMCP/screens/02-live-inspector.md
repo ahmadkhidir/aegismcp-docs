@@ -31,14 +31,21 @@
 ### Data Requirements
 
 **Data Needed:**
-- Real-time JSON-RPC event frames streamed over SSE: event ID, timestamp, agent identity, target MCP tool, request arguments, policy decision, latency, outbound redaction summary.
+- Real-time event frames from one Server-Sent Events connection at `/api/v1/stream/traffic`. The stream carries three named event types:
+  - `traffic`: one frame per intercepted tool call, carrying event ID, timestamp, agent identity, target MCP tool, request arguments, policy decision (`ALLOWED`, `BLOCKED`, `PENDING_APPROVAL`), latency, matched policy rule IDs, and outbound redaction summary.
+  - `approval`: one frame per approval ticket created, approved, rejected, or expired, carrying ticket ID, status, and expiry.
+  - `system`: one frame whenever the fleet threat level or the pending approval count changes.
+  The inspector renders `traffic` frames; `approval` and `system` frames keep the dashboard's live indicators current.
+- Event IDs increase monotonically for the life of the gateway node. A `: keepalive` comment arrives every 15 seconds while the stream is idle.
+- Browser subscription uses the console session cookie issued at login; a non-browser reader presents the OIDC access token as a Bearer credential. Any of the four roles may subscribe, and the stream is read-only.
 - Active agent identity list for filter autocomplete.
 
 **Data Flow:**
-1. Screen mounts → connect to Server-Sent Events stream (`/api/v1/stream/traffic`).
-2. Buffer incoming event frames (up to 1,000 items in memory).
-3. Append new rows to table; auto-scroll if enabled.
-4. User clicks row → populate right detail drawer with formatted syntax-highlighted JSON payload and matched rule metadata.
+1. Screen mounts → the browser opens the SSE connection with the console session cookie and the server's first frame sets a 3-second retry directive.
+2. Buffer incoming `traffic` frames (up to 1,000 items in memory).
+3. Append new rows to the table; auto-scroll if enabled. Apply `approval` and `system` frames to the live indicators.
+4. On disconnect, reconnect with exponential backoff from 1 second to 30 seconds without reloading the page. Events produced during the gap are not replayed, so the pending approval count is re-read from the approvals queue after reconnection.
+5. User clicks row → populate right detail drawer with formatted syntax-highlighted JSON payload and matched rule metadata.
 
 ### States
 
@@ -47,7 +54,7 @@
 | **Streaming** | Active SSE connection receiving events | Table live-updating; green "Live" indicator pulsing in header |
 | **Paused** | Administrator clicked "Pause" | Stream paused indicator; new events buffered in background counter |
 | **Empty** | No tool calls during inspection window | Empty-state message: "Waiting for agent tool activity..." with network pulse indicator |
-| **Reconnecting** | SSE stream disconnected | Amber banner: "Reconnecting to live traffic stream..." with retry spinner |
+| **Reconnecting** | SSE stream disconnected | Amber banner: "Reconnecting to live traffic stream..." with retry spinner; the client retries with exponential backoff from 1 second to 30 seconds |
 | **Filtered Empty** | Active filters match zero current events | "No events match the selected filters" with "Reset Filters" button |
 
 **Edge Cases:**

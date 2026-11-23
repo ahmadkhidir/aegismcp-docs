@@ -12,7 +12,7 @@
 ### Layout
 
 **Web layout:**
-- Top action bar displaying Active Policy Version, Git commit hash, synchronization status (Synced / Draft Modified), and "Deploy Policy" button.
+- Top action bar displaying Active Policy Version, its last-modified time, the Git commit that introduced it, synchronization status (Synced / Draft Modified), and "Deploy Policy" button.
 - Policy selector sidebar (left 25%): List of loaded policy files, agent group bindings, and tool whitelists.
 - Center-right split workspace (75%):
   - Left pane: Monaco-based YAML policy editor with syntax validation, rule schema auto-complete, and inline error highlighting.
@@ -22,7 +22,7 @@
 
 | Component | Type | Platform | Purpose | Data Source |
 |---|---|---|---|---|
-| Version bar | Toolbar | Web | Displays current active policy version and GitOps sync state | GET `/api/v1/policies/active` |
+| Version bar | Toolbar | Web | Displays the active policy version, its last-modified time, the Git commit that introduced it, and GitOps sync state | GET `/api/v1/policies/active` |
 | Policy list | List | Web | Selects between active policies, draft versions, and templates | GET `/api/v1/policies` |
 | Code editor | Panel | Web | Edits YAML policy rules with schema validation and linting | Local editor state |
 | Simulator panel | Card | Web | Interactive form to test rule evaluation against mock payloads | POST `/api/v1/policies/simulate` |
@@ -37,7 +37,7 @@
 ### Data Requirements
 
 **Data Needed:**
-- Active policy content (YAML string), version tag, last modified timestamp, and Git author metadata.
+- Active policy content (YAML string), version tag, last-modified timestamp, and the Git commit hash that introduced the version. The last-modified timestamp is the creation time of the active version, and the commit hash links to that commit in the GitOps repository, where the commit author is recorded; the policy record itself carries no author field.
 - Catalog of discovered MCP servers and registered tool names for autocomplete.
 
 **Data Flow:**

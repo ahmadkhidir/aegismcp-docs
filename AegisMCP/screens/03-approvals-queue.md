@@ -23,11 +23,12 @@
 
 | Component | Type | Platform | Purpose | Data Source |
 |---|---|---|---|---|
-| Tab bar | Tabs | Web | Switches between pending queue and historical reviews | Client state |
-| Approval card | Card | Web | Displays details, parameter diffs, and action buttons | GET `/api/v1/approvals/pending` |
+| Tab bar | Tabs | Web | Switches between the pending queue and the approved and rejected-or-expired history | Client state |
+| Approval card | Card | Web | Displays details, parameter diffs, agent intent, and action buttons | GET `/api/v1/approvals/pending` |
 | Countdown timer | Badge | Web | Visualizes remaining TTL before automatic expiration | Client timer based on `expires_at` |
 | Parameter inspector | Table | Web | Shows formatted input arguments and risk annotations | Item payload |
 | Rejection dialog | Modal | Web | Captures mandatory human rejection reason | User input |
+| History list | Table | Web | Lists resolved tickets for the selected history tab with resolution time, reviewer, and rejection reason | GET `/api/v1/approvals` filtered by the selected history status |
 
 ### Overlays
 
@@ -38,13 +39,15 @@
 ### Data Requirements
 
 **Data Needed:**
-- List of pending approval tickets: ticket ID, agent identity, tool name, argument payload, triggering policy rule ID, creation timestamp, expiration timestamp (`expires_at`), agent prompt context.
+- Pending approval tickets: ticket ID, agent identity, tool name, argument payload, triggering policy rule ID, agent intent (null when the call carried none), creation timestamp, expiration timestamp (`expires_at`).
+- Resolved tickets for the selected history tab, newest resolution first: ticket ID, agent identity, tool name, argument payload, status, triggering policy rule ID, creation and expiry timestamps, resolving reviewer, rejection reason, and resolution timestamp.
 
 **Data Flow:**
 1. Screen mounts → fetch all active pending approvals (`GET /api/v1/approvals/pending`).
 2. Subscribe to approval event updates via SSE to update list immediately when an action is approved via Slack or expired.
-3. User clicks "Approve" → send `POST /api/v1/approvals/{id}/approve`; on success, remove card with slide-out animation.
-4. User clicks "Reject" → open Rejection Reason Dialog; on submit, send `POST /api/v1/approvals/{id}/reject`.
+3. User switches to a history tab → fetch that tab's resolved tickets for its status (approved, rejected, or expired).
+4. User clicks "Approve" → send `POST /api/v1/approvals/{id}/approve`; on success, remove card with slide-out animation.
+5. User clicks "Reject" → open Rejection Reason Dialog; on submit, send `POST /api/v1/approvals/{id}/reject`.
 
 ### States
 
@@ -54,6 +57,8 @@
 | **Loaded** | One or more requests pending | List of approval cards ordered by urgency (least TTL remaining first) |
 | **Empty** | Zero items in pending queue | Clean illustration + "All clear — no pending agent actions requiring human approval" |
 | **Expired** | Timer reaches 00:00 while card is on screen | Card automatically fades out and transitions to Expired tab with notice |
+| **History Loading** | Fetching the selected history tab | Skeleton rows beneath the active history tab |
+| **History Empty** | Selected history tab has no resolved tickets | "No resolved requests in this status yet" with the active tab named |
 | **Error** | API request failure | Error banner with "Retry Loading Queue" action |
 
 **Edge Cases:**
