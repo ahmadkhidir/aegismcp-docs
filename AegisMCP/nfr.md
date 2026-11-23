@@ -13,13 +13,17 @@ AegisMCP operates inline on the critical execution path between AI agents and ba
 | ID | Operation class | Metric | Target (p50 / p95 / p99) | Load assumption | Verification |
 |---|---|---|---|---|---|
 | NFR-001 | Inline JSON-RPC proxying & policy evaluation | Added latency | 0.8ms / 2.2ms / 4.8ms | 10,000 rps sustained per gateway instance | Load test (Gatling) |
-| NFR-002 | Outbound tool response secret & PII scrubbing | Added latency | 1.2ms / 2.8ms / 5.5ms | Payloads up to 1MB at 2,000 rps | Load test (k6) |
+| NFR-002 | Outbound tool response secret & PII scrubbing | Added latency per scrubbed response | 1.2ms / 2.8ms / 5.5ms | 2,000 responses/s admitted on one gateway node at the response-size mix defined below, up to a 1 MB ceiling | Load test on the release's CI runner |
 | NFR-003 | Multi-step tool-chaining sequence anomaly check | Evaluation latency | 0.4ms / 0.9ms / 1.8ms | Sliding-window evaluation, 50k sessions | Microbenchmark |
 | NFR-004 | Tamper-evident audit ledger append | Commit latency | 0.6ms / 1.5ms / 3.2ms | Asynchronous WAL flush at 10k rps | Benchmark test |
 | NFR-005 | Web Console live traffic broadcast | Event delivery | < 80ms / < 120ms / < 200ms | 500 concurrent SSE dashboard connections | Synthetic probe |
 | NFR-006 | Local CLI proxy process startup (`aegis-cli`) | Startup time | < 150ms / < 250ms / < 400ms | Local workstation, cold start | CLI benchmark |
 
 NFR-005 is measured from event emission at the gateway to the rendered update on an already-subscribed console; keepalive comments and reconnect attempts are transport liveness and are not counted as delivered events.
+
+NFR-002 is a per-response latency requirement under an offered load, not an aggregate throughput target; the **Throughput & capacity** commitments own aggregate capacity. The 2,000 responses per second is the rate at which completed upstream responses enter outbound scrubbing on one gateway node, and the added latency is the interval from a response's complete upstream body entering the scrubber to its sanitized body becoming available for delivery — the delay the stage adds to a response that would otherwise be forwarded unscanned. The p50, p95, and p99 targets apply to the distribution of every admitted response in the run; they do not apply to a single 1 MB response, and the 1 MB figure is the ceiling of the run's size mix, not the size of every response.
+
+The size mix is part of the requirement: 90% of responses at 4 KB, 8% at 64 KB, 1.75% at 256 KB, and 0.25% at the 1 MB ceiling. A run admits at least 4,000 responses at the stated rate, reports each size class's percentiles separately, and satisfies the requirement only when every admitted response is scrubbed and served rather than dropped or rejected.
 
 **Throughput & capacity:**
 - **Peak concurrency:** Minimum 50,000 concurrent active streaming JSON-RPC sessions (HTTP/SSE or WebSocket) per gateway node without thread starvation, utilizing Java 21 Virtual Threads.
@@ -99,7 +103,7 @@ AegisMCP operates as a deterministic security proxy, policy evaluator, and patte
 | ID | Verified by | When | Owner |
 |---|---|---|---|
 | NFR-001 | Automated Gatling load test suite (latency p99 < 5ms) | Every CI/CD release build | Platform Engineering |
-| NFR-002 | k6 benchmark test for DLP scrubber throughput | Every CI/CD release build | DevSecOps Engineering |
+| NFR-002 | Automated load test on the release's CI runner that admits 2,000 responses/s of the declared size mix on one gateway node, asserts the run's p50, p95, and p99, and reports each size class separately | Every CI/CD release build | DevSecOps Engineering |
 | NFR-010 | Continuous synthetic liveness and readiness probes across staging and production, using the endpoints defined in [FEAT-001](features/FEAT-001.md) | Continuous (24/7) | Platform Engineering |
 | NFR-020 | Automated mTLS and OIDC test harness with invalid credential injection | Every PR build | Security Engineering |
 | NFR-025 | Golden test suite of 500+ credential formats and PII edge-case samples | Every PR build | Security Engineering |
