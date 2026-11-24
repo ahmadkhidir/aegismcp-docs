@@ -38,6 +38,7 @@ None (this screen acts as the root authentication gate overlaying the applicatio
 **Data Needed:**
 - Enterprise Identity Provider configuration (Issuer URL, Client ID, Redirect URI, Scopes).
 - Stored session state and cryptographic PKCE verifier parameters (`state`, `nonce`, `code_challenge`).
+- The OIDC access token returned by the token exchange, held in session scope for the console's authenticated requests. The access token is the sole credential presented to gateway endpoints, including the live traffic stream, in the `Authorization` header with the `Bearer` scheme; no console session cookie is issued.
 
 **Data Flow:**
 1. Screen mounts → verify if active token session exists in secure storage.
@@ -46,7 +47,7 @@ None (this screen acts as the root authentication gate overlaying the applicatio
 4. User clicks "Sign in with Enterprise SSO" → generate cryptographically random PKCE `code_verifier` (SHA-256 challenge) and redirect browser to IdP authorization endpoint (`/protocol/openid-connect/auth`).
 5. IdP authenticates user (with MFA) and returns authorization `code` to redirect URI.
 6. Exchange authorization `code` at token endpoint for ID Token and Access Token; decode claims and extract RBAC roles (`admin`, `operator`, `auditor`, `viewer`).
-7. Persist session with 15-minute inactivity tracker ([NFR-029](../nfr.md)) and transition to [Security Dashboard](01-dashboard.md).
+7. Persist the session with 15-minute inactivity tracker ([NFR-029](../nfr.md)) and transition to [Security Dashboard](01-dashboard.md). Every subsequent gateway request, including the live traffic stream, presents the retained access token as a Bearer credential.
 
 ### States
 
