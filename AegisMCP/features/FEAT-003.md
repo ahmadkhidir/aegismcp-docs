@@ -14,7 +14,7 @@ The command surface is:
 - `aegis-cli wrap --policy <file> [--no-color] -- <command> [args...]` compiles the policy once at start, then relays the agent's standard I/O through policy evaluation and DLP scrubbing to the child process, using the stdio contract defined in [FEAT-001](FEAT-001.md). Each inspection line on standard error carries the time, tool name, arguments with every value truncated to 512 characters and credential- or PII-shaped values replaced, the decision, and the evaluation duration. Color is used only when standard error is a terminal and `--no-color` is absent. No gateway connection is made.
 - `aegis-cli lint <file>` validates the policy schema, argument constraints, and rule reachability, and reports shadowed or unreachable rules as warnings without failing.
 - `aegis-cli kill (--agent <id> | --target-type <session|agent|server|global> [--target-id <id>]) [--reason <text>] [--gateway <url>] [--token <jwt>] [--second-approver <operator>] [--confirm-lockdown]` sends the emergency action, prints the returned status, affected session count, and timestamp, and reports every refusal with its HTTP status and reason. `--agent` is shorthand for the `agent` target type. A `global` target requires `--confirm-lockdown` and sends no `targetId`.
-- `aegis-cli verify-audit --ledger <file> [--from <block-index>]` recomputes the ledger's SHA-256 chain from the genesis block, or from the given index using its predecessor's sealed hash, to the sealed head, and reports the block count and head hash. It names the first index whose block hash, parent link, or sealed coverage fails to verify ([NFR-026](../nfr.md)).
+- `aegis-cli verify-audit [--gateway <url>] [--token <jwt>]` reports the deployment's most recent completed chain verification. It calls `GET /api/v1/audit/integrity` (C-015) with the operator's OIDC access token in the `Authorization` header; the token carries the `admin` or `auditor` role. It prints `valid`, `totalVerifiedBlocks`, and `lastVerifiedAt` to standard output and exits `0` only when the chain is intact. A verdict that the chain is broken exits `1` with the same three values on standard output; a `401`, `403`, or `503` answer, an unreachable gateway, or a response that does not carry those fields exits `1` with the HTTP status and reason, or the target URL and connection failure, on standard error, reports no verdict, and does not retry. The command reads no file and has no offline mode: the gateway recalculates the full chain from the genesis block to the sealed head on its verification schedule ([NFR-026](../nfr.md)), and the command reports that completed result rather than repeating the calculation.
 
 Exit codes mean the same thing for every command: `0` success, `1` a failure the command ran into (invalid policy, broken ledger, refused or failed gateway request, child failure, or internal error), `2` a usage error or unreadable input path, `130` after an interrupt, `143` after a termination signal. Standard output carries results for `lint`, `kill`, and `verify-audit`; `wrap` reserves standard output for the protocol stream.
 
@@ -49,12 +49,15 @@ Exit codes mean the same thing for every command: `0` success, `1` a failure the
 - **Given** the gateway answers `401`, `403`, `404`, or `503` to a kill request
   **When** the CLI receives it
   **Then** the CLI exits 1 and prints the status and reason to standard error; a `400` answer exits 2.
-- **Given** a ledger whose chain is intact
-  **When** an auditor runs `aegis-cli verify-audit --ledger ledger.wal`
-  **Then** the command prints the verified block count and head hash and exits 0.
-- **Given** a ledger with a modified, reordered, or missing block
-  **When** an auditor runs `aegis-cli verify-audit --ledger ledger.wal`
-  **Then** the command exits 1 and names the first index that fails verification.
+- **Given** a gateway whose most recent completed verification found the chain intact
+  **When** an auditor runs `aegis-cli verify-audit --gateway <url> --token <jwt>`
+  **Then** the command prints `valid` true, the covered block count, and the verification time to standard output and exits 0.
+- **Given** a gateway whose most recent completed verification found the chain broken
+  **When** an auditor runs `aegis-cli verify-audit --gateway <url> --token <jwt>`
+  **Then** the command prints `valid` false, the covered block count, and the verification time to standard output and exits 1.
+- **Given** a gateway that answers `401`, `403`, or `503`, a gateway that cannot be reached, or a `200` answer that omits the reported verification fields
+  **When** an auditor runs `aegis-cli verify-audit --gateway <url> --token <jwt>`
+  **Then** the CLI exits 1, prints the HTTP status and reason, or the target URL and connection failure, to standard error, reports no verdict, and does not retry.
 - **Given** an unknown option, a missing required option, or a missing `--` separator
   **When** any command is run
   **Then** the CLI prints usage to standard error, writes nothing to standard output, and exits 2.
@@ -66,5 +69,4 @@ Exit codes mean the same thing for every command: `0` success, `1` a failure the
 - Interrupt or termination signal during a wrapped session → Forward the signal to the child, wait up to five seconds for it to exit, terminate it if it is still running, and exit 130 or 143.
 - Standard error is closed by the caller → Continue proxying the protocol stream and drop inspection lines rather than writing them to standard output.
 - Gateway unreachable during a kill request → Print the target URL and the connection failure, exit 1, and do not retry.
-- `verify-audit --from` names an index outside the ledger → Exit 2 without reporting a verdict on the chain.
-- Ledger file is truncated mid-block → Exit 1 naming the first block that could not be read.
+- The reported verification predates the current sealed head → Print the reported verification time with the verdict; the command does not trigger a new chain calculation.
