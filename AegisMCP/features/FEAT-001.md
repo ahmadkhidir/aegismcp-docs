@@ -18,6 +18,8 @@ Agents reach the gateway over one of three remote transports on its TLS listener
 
 Each upstream MCP server is configured with one of the same three transports. The gateway opens or reuses that upstream connection, forwards the request, and matches each response to its request by JSON-RPC `id`.
 
+A single upstream response is capped at 20 MB (20,971,520 bytes) on every transport. The gateway stops reading a response at that bound, closes the upstream exchange, and answers the request with a JSON-RPC error that repeats the request `id`, carries `-32603` and machine code `RESPONSE_TOO_LARGE`, and delivers no partial result: over HTTPS the status is `502`, on an SSE session the error is delivered as the request's `event: message` frame, on WebSocket as the request's text frame, and on the stdio channel as one line. The refusal is recorded in the audit ledger as a blocked interaction.
+
 The same listener serves two unauthenticated probe endpoints that expose no tenant, credential, host, path, or exception detail. `GET /health` answers `200` with `{"status":"UP"}` for as long as the process serves requests, and is the liveness signal. `GET /ready` answers `200` with `{"status":"UP","checks":{"configuration":{"status":"UP"},"policy":{"status":"UP"},"auditLedger":{"status":"UP"}},"timestamp":"<ISO-8601>"}` once startup has completed. It answers `503` with `"status":"DOWN"`, a top-level `reason` from `STARTING`, `CONFIGURATION_INVALID`, `POLICY_INVALID`, `LEDGER_UNWRITABLE`, or `SHUTTING_DOWN`, and every failed check marked `"DOWN"`, whenever the node must not receive agent traffic.
 
 **Acceptance Criteria:**
@@ -48,6 +50,9 @@ The same listener serves two unauthenticated probe endpoints that expose no tena
 - **Given** an authorized tool execution response from the upstream MCP server
   **When** the response streams back through the proxy
   **Then** AegisMCP delivers the result to the agent client preserving exact JSON-RPC message identifiers.
+- **Given** an upstream MCP server response larger than 20 MB
+  **When** it streams back through the proxy
+  **Then** the gateway stops reading at 20 MB, repeats the request `id`, answers with `-32603` and machine code `RESPONSE_TOO_LARGE`, delivers no partial result, closes the upstream exchange, and records the refusal in the audit ledger.
 - **Given** an agent with a missing, expired, or untrusted credential
   **When** it opens an SSE stream, posts to a message URL, or requests a WebSocket upgrade
   **Then** the gateway answers `401` and establishes no session.
@@ -64,6 +69,7 @@ The same listener serves two unauthenticated probe endpoints that expose no tena
 **Edge Cases & Failure States:**
 - Malformed JSON or non-spec JSON-RPC message → Return standard JSON-RPC error response (`-32700 Parse error` or `-32600 Invalid Request`) and abort upstream forwarding.
 - Upstream MCP server crash or unhandled timeout → Return JSON-RPC internal error (`-32603`) to the agent, terminate the upstream socket, and log an upstream connection failure event.
+- Upstream response exceeds the 20 MB output ceiling → Stop reading at the ceiling, close the upstream exchange, answer the request with `-32603` and machine code `RESPONSE_TOO_LARGE`, deliver no truncated content, and record the refusal in the audit ledger.
 - SSE stream closes while a tool call is in flight or awaiting approval → Abandon the call, cancel the approval ticket, refuse the session's message URL, and record the cancellation in the audit ledger and Web Console approval history ([FEAT-006](FEAT-006.md)).
 - Upstream response carries an `id` that matches no in-flight request in the session → Discard the response and never deliver it to another session.
 - Two requests on one streaming connection carry the same `id` → Reject the second with `-32600` and forward only the first.

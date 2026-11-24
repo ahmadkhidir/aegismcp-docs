@@ -49,7 +49,7 @@ The size mix is part of the requirement: 90% of responses at 4 KB, 8% at 64 KB, 
 | Central policy storage unavailable | Fail-closed for unknown routes; serve active in-memory compiled policy cache | Tool execution continues normally for existing policies; new policy sync paused |
 | Human approval (Slack/Webhook) down | Buffer requests in durable queue; reject upon 5-minute timeout if unacknowledged | Agent receives `APPROVAL_SERVICE_UNAVAILABLE` error; non-approval tools unaffected |
 | Audit export SIEM endpoint unreachable | Spool audit records to local encrypted disk buffer; auto-retry with exponential backoff | No impact on real-time tool execution; log backlog drains when SIEM restores |
-| Outbound PII scrubber memory pressure | Stream payloads through sliding fixed-size window; enforce 20MB tool output ceiling | Tool responses exceeding ceiling truncated with `RESPONSE_TOO_LARGE` notice |
+| Outbound PII scrubber memory pressure | Stream payloads through sliding fixed-size window; enforce the 20 MB tool output ceiling | Tool responses exceeding the ceiling are refused with a `RESPONSE_TOO_LARGE` error and no partial content |
 | Agent SSE or WebSocket stream lost | End the session, abandon its in-flight calls, and cancel and mark expired any pending approval ticket | The agent reconnects on a new session and reissues the call |
 
 **Maintenance windows:** Zero-downtime rolling upgrades supported via Kubernetes rolling updates and graceful connection draining.
