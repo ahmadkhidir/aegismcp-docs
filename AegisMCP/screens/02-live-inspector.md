@@ -35,11 +35,11 @@
   - `system`: one frame whenever the fleet threat level or the pending approval count changes.
   The inspector renders `traffic` frames; `approval` and `system` frames keep the dashboard's live indicators current.
 - Event IDs increase monotonically for the life of the gateway node. A `: keepalive` comment arrives every 15 seconds while the stream is idle.
-- Browser subscription uses the console session cookie issued at login; a non-browser reader presents the OIDC access token as a Bearer credential. Any of the four roles may subscribe, and the stream is read-only.
+- The console subscribes with the operator's OIDC access token, presented in the `Authorization` header with the `Bearer` scheme on an authenticated fetch-based event reader. Any of the four roles may subscribe, and the stream is read-only.
 - Active agent identity list for filter autocomplete.
 
 **Data Flow:**
-1. Screen mounts → the browser opens the SSE connection with the console session cookie and the server's first frame sets a 3-second retry directive.
+1. Screen mounts → the console opens an authenticated fetch reader against the stream with the operator's OIDC access token in the `Authorization` header, and the server's first frame sets a 3-second retry directive.
 2. Buffer incoming `traffic` frames (up to 1,000 items in memory).
 3. Append new rows to the table; auto-scroll if enabled. Apply `approval` and `system` frames to the live indicators.
 4. On disconnect, reconnect with exponential backoff from 1 second to 30 seconds without reloading the page. Events produced during the gap are not replayed, so the pending approval count is re-read from the approvals queue after reconnection.
